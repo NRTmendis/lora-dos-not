@@ -1,20 +1,24 @@
-""" LoRa Light Sensor """
+""" LoRa GPS Sensor """
+
+Nissanka Mendis 15/01/2018
 ​
 from network import LoRa
 import usocket
 import binascii
 import ujson
-import struct
 import time
 import machine
 import ubinascii
-import uos
+from gps import GPS_UART_start
+from gps import NmeaParser
 ​
 WIFI_MAC = ubinascii.hexlify(machine.unique_id()).upper()
 
 TX_PK = {
     'NiD': '',
-    'LVal': ''
+    'Latitude': '',
+	'Longitude': '',
+	'Fix-Time': ''
 }
 
 def dr_to_sf(dr):
@@ -32,9 +36,11 @@ def dr_to_bw(dr):
 	else:
 		return LoRa.BW_500KHZ
 
-def _make_node_packet(val):
+def _make_node_packet(val1,val2,val3):
         TX_PK["NiD"] = WIFI_MAC
-        TX_PK["LVal"] = val
+        TX_PK["Lat"] = val1
+		TX_PK["Long"] = val2
+		TX_PK["Fx-T"] = val3
         return ujson.dumps(TX_PK)
 
 # for EU868
@@ -68,23 +74,28 @@ lora_sock.setsockopt(usocket.SOL_LORA, usocket.SO_DR, 5)
 # make the socket blocking
 lora_sock.setblocking(False)
 ​
-adc = machine.ADC()             # create an ADC object
-apin = adc.channel(pin='P13')   # create an analog pin on P13
-​
+​def GPS_run():
+    while (True):
+        if (com.any()):
+            data =com.readline()
+            if (len(data) >= 67):
+                if (data[0:7] == b'$GPGGA,'):
+                    place = NmeaParser()
+                    place.update(data)
+					return _make_node_packet(place.latitude,place.longitude,place.fix_time)
 
 def val_send(value):
    lora_sock.send(value)
-   time.sleep(10)
+   time.sleep(2)
    #rx, port = lora_sock.recvfrom(256)
    #if rx:
    #    print('Received: {}, on port: {}'.format(rx, port))
    #time.sleep(6.0)
 
-
+   
+print('GPS start')
+com = GPS_UART_start()
 while (True):
-   val = apin()                  # read an analog value
-   val2 = int(val)
-   #val2 = (uos.urandom(12)[4])
-   valPKT=_make_node_packet(val2)
+   valPKT=GPS_run()
    print(valPKT)
    val_send(valPKT)
