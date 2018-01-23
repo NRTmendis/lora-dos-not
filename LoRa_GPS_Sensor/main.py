@@ -1,6 +1,6 @@
 """ LoRa GPS Sensor """
 
-Nissanka Mendis 15/01/2018
+# Nissanka Mendis 15/01/2018
 ​
 from network import LoRa
 import usocket

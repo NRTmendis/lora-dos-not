@@ -7,7 +7,6 @@ import sqlite3
 Lora_GTW_DB = "lora_GTW.db"
 
 #Database Manager Class
-
 class DatabaseManager():
 	def __init__(self):
 		self.conn = sqlite3.connect(Lora_GTW_DB)
@@ -23,7 +22,7 @@ class DatabaseManager():
 	def __del__(self):
 		self.cur.close()
 		self.conn.close()
-
+	
 def Lora_Gateway_PKT_Data_handler(jsonData):
 	#Parse Data
 	json_Dict = json.loads(jsonData)
@@ -31,11 +30,13 @@ def Lora_Gateway_PKT_Data_handler(jsonData):
 	pkt_date_and_time = json_Dict['time']
 	pkt_rssi = json_Dict['rssi']
 	pkt_snr = json_Dict['lsnr']
-
-	dec_data = json_Dict['data']
-	pkt_data = dec_data.decode("base64")
-
 	pkt_size = json_Dict['size']
+	try:
+		dec_data = json_Dict['data']
+		pkt_data = dec_data.decode("base64")
+	except: 
+		print("Error decoding data in PKT")
+		return
 
 	#Push to DB
 	dbObj = DatabaseManager()
@@ -54,12 +55,13 @@ def Lora_Gateway_Send_Data(jsonData):
 	dbObj.add_del_update_db_record("insert into Lora_Gateway_Send_Data (snd_recp, snd_date_and_time, snd_data) values (?,?,?)",[snd_recp, snd_date_and_time, snd_data])
 	del dbObj
 
-	
 #Select function to select DB function based on MQTT topic
 
 def lora_Data_Handler(Topic, jsonData):
-	if Topic == "UCL4thYearLORA/NodeDATA":
-		Lora_Gateway_PKT_Data_handler(jsonData)
-	elif Topic == "UCL4thYearLORA/gatewayUpdateDATA":
-		Lora_Gateway_Send_Data(jsonData)
-
+	try:
+		if Topic == "UCL4thYearLORA/NodeDATA":
+			Lora_Gateway_PKT_Data_handler(jsonData)
+		elif Topic == "UCL4thYearLORA/gatewayUpdateDATA":
+			Lora_Gateway_Send_Data(jsonData)
+	except:
+		print("Error parsing PKT to database")
