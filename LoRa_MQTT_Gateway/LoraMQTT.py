@@ -38,16 +38,7 @@ UDP_THREAD_CYCLE_MS = const(10)
 
 STAT_PK = {
     'gtiD': '',
-    'time': '',
-    'lati': 0,
-    'long': 0,
-    'alti': 0,
-    'rxnb': 0,
-    'rxok': 0,
-    'rxfw': 0,
-    'ackr': 100.0,
-    'dwnb': 0,
-    'txnb': 0
+    'time': ''
 }
 
 RX_PK = {
@@ -66,13 +57,6 @@ RX_PK = {
     'size': 0,
     'data': ''
 }
-
-TX_ACK_PK = {
-    'txpk_ack': {
-        'error': ''
-    }
-}
-
 
 class NanoGateway:
     """
@@ -99,11 +83,6 @@ class NanoGateway:
 
         self.server_ip = None
 
-        self.rxnb = 0
-        self.rxok = 0
-        self.rxfw = 0
-        self.dwnb = 0
-        self.txnb = 0
 
         self.sf = self._dr_to_sf(self.datarate)
         self.bw = self._dr_to_bw(self.datarate)
@@ -131,7 +110,7 @@ class NanoGateway:
         # setup WiFi as a station and connect
         self.wlan = WLAN(mode=WLAN.STA)
         self._connect_to_wifi()
-
+        
         # get a time sync
         self._log('Syncing time with {} ...', self.ntp_server)
         self.rtc.ntp_sync(self.ntp_server, update_period=self.ntp_period)
@@ -145,10 +124,10 @@ class NanoGateway:
         self._log("MQTT Server connected")
 
         # push the first time immediatelly
-        #self._push_data(self._make_stat_packet())
+        self._send_down_link(self._make_stat_packet(), self.datarate, self.frequency)
 
         # create the alarm for LoRa stats
-        #self.stat_alarm = Timer.Alarm(handler=lambda t: self._push_data(self._make_stat_packet()), s=60, periodic=True)
+        self.stat_alarm = Timer.Alarm(handler=lambda t: self._send_down_link(self._make_stat_packet(), self.datarate, self.frequency), s=10, periodic=True)
 
         # start the MQTT subscriber thread to receive data
         _thread.start_new_thread(self._MQTT_subscribe_thread, ())
@@ -231,16 +210,12 @@ class NanoGateway:
 
         events = lora.events()
         if events & LoRa.RX_PACKET_EVENT:
-            self.rxnb += 1
-            self.rxok += 1
             rx_data = self.lora_sock.recv(256)
             stats = lora.stats()
             packet = self._make_node_packet(rx_data, self.rtc.now(), stats.rx_timestamp, stats.sfrx, self.bw, stats.rssi, stats.snr)
             self._push_data(packet)
             self._log('Received packet: {}', packet)
-            self.rxfw += 1
         if events & LoRa.TX_PACKET_EVENT:
-            self.txnb += 1
             lora.init(
                 mode=LoRa.LORA,
                 frequency=self.frequency,
@@ -271,12 +246,7 @@ class NanoGateway:
     def _make_stat_packet(self):
         now = self.rtc.now()
         STAT_PK["gtiD"] = self.id
-        STAT_PK["time"] = "%d-%02d-%02d %02d:%02d:%02d GMT" % (now[0], now[1], now[2], now[3], now[4], now[5])
-        STAT_PK["rxnb"] = self.rxnb
-        STAT_PK["rxok"] = self.rxok
-        STAT_PK["rxfw"] = self.rxfw
-        STAT_PK["dwnb"] = self.dwnb
-        STAT_PK["txnb"] = self.txnb
+        STAT_PK["time"] = "%d-%02d-%02dT%02d:%02d:%02d.%dZ" % (now[0], now[1], now[2], now[3], now[4], now[5], now[6])
         return ujson.dumps(STAT_PK)
 
     def _make_node_packet(self, rx_data, rx_time, tmst, sf, bw, rssi, snr):
@@ -299,30 +269,22 @@ class NanoGateway:
         except Exception as ex:
             self._log('Failed to send packet to MQTT server: {}', ex)
 
-    def _send_down_link(self, data, tmst, datarate, frequency):
+    def _send_down_link(self, data, datarate, frequency):
         """
         Transmits a downlink message over LoRa.
         """
 
-        self.lora.init(
+        self.lora = LoRa(
             mode=LoRa.LORA,
-            frequency=frequency,
-            bandwidth=self._dr_to_bw(datarate),
-            sf=self._dr_to_sf(datarate),
+            frequency=self.frequency,
+            bandwidth=self.bw,
+            sf=self.sf,
             preamble=8,
-            coding_rate=LoRa.CODING_4_5,
-            tx_iq=True
+            coding_rate=LoRa.CODING_4_5
             )
-        while utime.ticks_us() < tmst:
-            pass
+        self.lora_sock = usocket.socket(usocket.AF_LORA, usocket.SOCK_RAW)
+        self.lora_sock.setblocking(False)
         self.lora_sock.send(data)
-        self._log(
-            'Sent downlink packet scheduled on {:.3f}, at {:.1f} Mhz using {}: {}',
-            tmst / 1000000,
-            self._freq_to_float(frequency),
-            datarate,
-            data
-        )
 
     def sub_cb(self, topic, msg):
         self._log((topic, msg))
