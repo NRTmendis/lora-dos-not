@@ -13,8 +13,8 @@ PORT = 1883
 SND_TPC = 'UCL4thYearLORA/NodeDATA'
 MTCE_TPC = 'UCL4thYearLORA/gatewayUpdateDATA'
 
-NTP = "pool.ntp.org"
-NTP_PERIOD_S = 3600
+NTP = "time.google.com"
+NTP_PERIOD_S = 180
 
 WIFI_SSID = 'eduroam'
 WIFI_USER = 'XXXXXXXXXXXXXX'
