@@ -3,8 +3,21 @@
 
 import json
 import sqlite3
+import base64
 
 Lora_GTW_DB = "lora_GTW.db"
+
+#Gateway Locations (Change according to preset location)
+
+#		[Gateway ID,	Lattitude, Longitude]
+Gw_Loc_db = [	["0","",""],			#default blank
+		["240AC4F01E023C54",9.05,4.58],
+		["240AC4F01E0286DC",9.05,1.5],
+		["240AC4F01E025FF4",0.66,4.58],
+		["240AC4F01E023E3C",0.66,0.33]
+	    ]
+Gw_max_num = 5	
+
 
 #Database Manager Class
 class DatabaseManager():
@@ -22,6 +35,17 @@ class DatabaseManager():
 	def __del__(self):
 		self.cur.close()
 		self.conn.close()
+
+def Gateway_Location(jsonData):
+	try:
+		json_Dict = json.loads(jsonData)
+		gw_id = str(json_Dict['gtiD'])
+		for x in range(0, Gw_max_num):
+			if Gw_Loc_db[x][0] == gw_id:
+				return (str(Gw_Loc_db[x][1]),str(Gw_Loc_db[x][2]))
+		return (str(Gw_Loc_db[0][1]),str(Gw_Loc_db[0][2]))
+	except:
+		return ("","")
 	
 def Lora_Gateway_PKT_Data_handler(jsonData):
 	#Parse Data
@@ -31,16 +55,21 @@ def Lora_Gateway_PKT_Data_handler(jsonData):
 	pkt_rssi = json_Dict['rssi']
 	pkt_snr = json_Dict['lsnr']
 	pkt_size = json_Dict['size']
+	gw_loc = ("","")
 	try:
 		dec_data = json_Dict['data']
-		pkt_data = dec_data.decode("base64")
+		pkt_data = base64.b64decode(dec_data)
+		gw_loc = Gateway_Location(pkt_data)
 	except: 
 		print("Error decoding data in PKT")
 		return
+	#Set GW locations if PKT=Gateway PKT
+	pkt_latitude = gw_loc[0]
+	pkt_longitude = gw_loc[1]
 
 	#Push to DB
 	dbObj = DatabaseManager()
-	dbObj.add_del_update_db_record("insert into Lora_Gateway_PKT_Data (gateway_id, pkt_date_and_time, pkt_rssi, pkt_snr, pkt_data, pkt_size) values (?,?,?,?,?,?)",[gateway_id, pkt_date_and_time, pkt_rssi, pkt_snr, pkt_data, pkt_size])
+	dbObj.add_del_update_db_record("insert into Lora_Gateway_PKT_Data (gateway_id, pkt_date_and_time, pkt_rssi, pkt_snr, pkt_data, pkt_size, pkt_latitude, pkt_longitude) values (?,?,?,?,?,?,?,?)",[gateway_id, pkt_date_and_time, pkt_rssi, pkt_snr, pkt_data, pkt_size, pkt_latitude, pkt_longitude])
 	del dbObj
 
 def Lora_Gateway_Send_Data(jsonData):
