@@ -8,15 +8,13 @@ import base64
 Lora_GTW_DB = "lora_GTW.db"
 
 #Gateway Locations (Change according to preset location)
-
 #		[Gateway ID,	Lattitude, Longitude]
-Gw_Loc_db = [	["0","",""],			#default blank
+Gw_Loc_db = [
 		["240AC4F01E023C54",9.05,4.58],
 		["240AC4F01E0286DC",9.05,1.5],
 		["240AC4F01E025FF4",0.66,4.58],
 		["240AC4F01E023E3C",0.66,0.33]
 	    ]
-Gw_max_num = 5	
 
 
 #Database Manager Class
@@ -40,10 +38,10 @@ def Gateway_Location(jsonData):
 	try:
 		json_Dict = json.loads(jsonData)
 		gw_id = str(json_Dict['gtiD'])
-		for x in range(0, Gw_max_num):
+		for x in range(0, len(Gw_Loc_db)):
 			if Gw_Loc_db[x][0] == gw_id:
 				return (str(Gw_Loc_db[x][1]),str(Gw_Loc_db[x][2]))
-		return (str(Gw_Loc_db[0][1]),str(Gw_Loc_db[0][2]))
+		return ("","")
 	except:
 		return ("","")
 	
