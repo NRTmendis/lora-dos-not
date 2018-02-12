@@ -29,7 +29,7 @@ def Gateway_Check(jsonData):
 	except:
 		return ("Not Found")	#Not a gateway packet
 		
-def new_cell_for_ML(db_ids):
+def new_cell_for_ML(cell_row, db_ids):
 	#Set all Gateway RSSI to -150dB, noise floor level
 	Gw_RSSI = [-150]
 	for x in range(1, len(Gw_Loc_db)):
@@ -62,6 +62,7 @@ def new_cell_for_ML(db_ids):
 					Gw_RSSI[y] = -20	#The packet was from a gateway so max dB set
 	
 	new_cell_row = Gw_RSSI
+	new_cell_row.insert(0,(cell_row+1)) #Add iD to front
 	new_cell_row.append(pkt_long)
 	new_cell_row.append(pkt_lat)
 	return (new_cell_row)
@@ -73,7 +74,7 @@ max_id = int(curs.fetchone()[0])
 
 row=1
 cell_row=0
-DATA_to_CSV =  []
+DATA_to_CSV = []
 
 while row <= max_id:
 	curs.execute('SELECT pkt_data FROM Lora_Gateway_PKT_Data WHERE id ='+ str(row))
@@ -90,13 +91,21 @@ while row <= max_id:
 			pkt_matrix_ids.append(x)
 	if pkt_matrix_ids is not None:
 		if len(pkt_matrix_ids) >= 3:
-			DATA_to_CSV.append(new_cell_for_ML(pkt_matrix_ids))
+			DATA_to_CSV.append(new_cell_for_ML(cell_row, pkt_matrix_ids))
 			cell_row = cell_row + 1
 	row = row + 1
 
 #Close SQL DB
 conn.close()
+#Create CSV Header
+max_GW = len(DATA_to_CSV[0])-3
+CSV_header = ["iD"]
+for x in range(0, max_GW):
+	CSV_header.append("GW_RSSI_"+str(x+1))
+CSV_header.append("GW_Long")
+CSV_header.append("GW_Lat")
 #Write to CSV
 with open(Lora_GTW_PP,'w', newline='') as out_csv_file:
 	csv_out = csv.writer(out_csv_file)
+	csv_out.writerow(CSV_header)
 	csv_out.writerows(DATA_to_CSV)
