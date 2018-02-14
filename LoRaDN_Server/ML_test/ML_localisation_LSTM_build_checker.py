@@ -7,7 +7,8 @@ from numpy import concatenate
 from matplotlib import pyplot
 from pandas import read_csv
 from pandas import DataFrame
-from sklearn.preprocessing import MinMaxScaler
+from sklearn.externals import joblib
+from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import mean_squared_error
 from keras.models import load_model
 from keras.models import Sequential
@@ -20,8 +21,9 @@ values = dataset.values
 # ensure all data is float
 values = values.astype('float32')
 # normalize features
-scaler = MinMaxScaler(feature_range=(0, 1))
+scaler = StandardScaler()
 scaled = scaler.fit_transform(values)
+#joblib.dump(scaler, 'scaler.save') 
 
 # split into train and test sets
 #values = reframed.values
@@ -43,11 +45,11 @@ print(train_X.shape, train_y.shape, test_X.shape, test_y.shape)
 #model.add(Dense(2))
 #model.compile(loss='mean_squared_error', optimizer='adam')
 # fit network
-#model.fit(train_X, train_y, epochs=1000, batch_size=72, verbose=1, shuffle=True)
-#history = model.fit(train_X, train_y, epochs=500, batch_size=72, validation_data=(test_X, test_y), verbose=1, shuffle=True)
+#history = model.fit(train_X, train_y, epochs=1000, batch_size=72, validation_data=(test_X, test_y), verbose=1, shuffle=True)
 #model.save('localisation_model.h5')
 
 model = load_model('localisation_model.h5')
+scaler = joblib.load('scaler.save') 
 
 # make a prediction
 yhat = model.predict(test_X)

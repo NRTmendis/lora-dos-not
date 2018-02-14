@@ -7,7 +7,8 @@ from numpy import concatenate
 from numpy import array
 from matplotlib import pyplot
 from pandas import read_csv
-from sklearn.preprocessing import MinMaxScaler
+from sklearn.externals import joblib
+from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import mean_squared_error
 from sklearn.externals import joblib
 from keras.models import load_model
@@ -22,8 +23,10 @@ def train_localisation_model(epCH=500,CSV_file='lora_GTW_PP.csv'):
 	# ensure all data is float
 	values = values.astype('float32')
 	# normalize features
-	scaler = MinMaxScaler(feature_range=(0, 1))
+	scaler = StandardScaler()
+	scaler.fit(values)
 	scaled = scaler.fit_transform(values)
+	joblib.dump(scaler, 'scaler.save') 
 	# split into train and test sets
 	train = scaled
 	# split into input and outputs
@@ -40,28 +43,21 @@ def train_localisation_model(epCH=500,CSV_file='lora_GTW_PP.csv'):
 	# save model
 	model.save('localisation_model.h5')
 
-def loc_single_predict(test_Val, QUERY_CSV_BATCH='none.csv', GTW_CSV_file='lora_GTW_PP.csv'):
-	# load dataset
-	dataset = read_csv(GTW_CSV_file, header=0, index_col=0)
-	values = dataset.values
-	# ensure all data is float
-	values = values.astype('float32')
+def loc_single_predict(test_Val, QUERY_CSV_BATCH='none.csv'):
 	if QUERY_CSV_BATCH != 'none.csv':
 		#run batch in CSVinstead of value
 		dataset_Q = read_csv(QUERY_CSV_BATCH, header=0, index_col=0)
 		values_Q = dataset_Q.values
 		test_Vals = values_Q.astype('float32')
-		values = concatenate((values,test_Vals), axis=0)
 	else:
 		# combine test value and dataset used to train model
 		for row in test_Val:
 			del row[0] #Remove ID from array.
 		test_Val = array(test_Val)
 		test_Vals = test_Val.astype('float32')
-		values = concatenate((values,test_Vals), axis=0)
 	# normalize features
-	scaler = MinMaxScaler(feature_range=(0, 1))
-	scaled = scaler.fit_transform(values)
+	scaler = joblib.load('scaler.save') 
+	scaled = scaler.transform(test_Vals)
 	# split back to test value
 	check = scaled[-int(test_Vals.shape[0]):,:]
 	# split into input and outputs
