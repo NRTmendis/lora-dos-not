@@ -64,7 +64,7 @@ class NanoGateway:
     Configuration requried in config.py for wifi access and MQTT server connections and LoRa frequency.
     """
 
-    def __init__(self, id, frequency, datarate, ssid, user, password, server, port, tpc_snd, tpc_mtce, ntp_server='pool.ntp.org', ntp_period=3600):
+    def __init__(self, id, frequency, datarate, ssid, user, password, server, port, tpc_snd, tpc_mtce, ntp_server='pool.ntp.org', ntp_period=3600, bcast_pkt_gtw_period=60):
         self.id = id
         self.server = server
         self.port = port
@@ -91,6 +91,8 @@ class NanoGateway:
 
         self.wlan = None
         self.sock = None
+
+        self.bcast_pkt_gtw_period = bcast_pkt_gtw_period
 
         #maintnenace MQTT subscription flag
         self.MQTTsub_stop = False
@@ -127,7 +129,7 @@ class NanoGateway:
         self._send_down_link(self._make_stat_packet(), self.datarate, self.frequency)
 
         # create the alarm for LoRa stats
-        self.stat_alarm = Timer.Alarm(handler=lambda t: self._send_down_link(self._make_stat_packet(), self.datarate, self.frequency), s=10, periodic=True)
+        self.stat_alarm = Timer.Alarm(handler=lambda t: self._send_down_link(self._make_stat_packet(), self.datarate, self.frequency), s=self.bcast_pkt_gtw_period, periodic=True)
 
         # start the MQTT subscriber thread to receive data
         _thread.start_new_thread(self._MQTT_subscribe_thread, ())
@@ -141,6 +143,7 @@ class NanoGateway:
             sf=self.sf,
             preamble=8,
             coding_rate=LoRa.CODING_4_5,
+			power_mode=LoRa.ALWAYS_ON,
             tx_iq=True
         )
 
@@ -257,7 +260,6 @@ class NanoGateway:
         RX_PK["datr"] = self._sf_bw_to_dr(sf, bw)
         RX_PK["rssi"] = rssi
         RX_PK["lsnr"] = snr
-        print(rx_data)
         RX_PK["data"] = ubinascii.b2a_base64(rx_data)
         RX_PK["size"] = len(rx_data)
         return ujson.dumps(RX_PK)
@@ -280,13 +282,33 @@ class NanoGateway:
             bandwidth=self.bw,
             sf=self.sf,
             preamble=8,
-            coding_rate=LoRa.CODING_4_5
+            coding_rate=LoRa.CODING_4_5,
+			power_mode=LoRa.TX_ONLY,
+            tx_iq=False
             )
         self.lora_sock = usocket.socket(usocket.AF_LORA, usocket.SOCK_RAW)
         self.lora_sock.setblocking(False)
         self.lora_sock.send(data)
+        self.lora = LoRa(
+            mode=LoRa.LORA,
+            frequency=self.frequency,
+            bandwidth=self.bw,
+            sf=self.sf,
+            preamble=8,
+            coding_rate=LoRa.CODING_4_5,
+			power_mode=LoRa.ALWAYS_ON,
+            tx_iq=True
+            )
+
+    def process_msg(self, msg_instruction):
+        in_data = msg_instruction
+        self.bcast_pkt_gtw_period = int(in_data)
 
     def sub_cb(self, topic, msg):
+        try:
+            self.process_msg(msg)
+        except Exception as ex:
+            self._log('Failed to process incoming message: {}', ex)
         self._log((topic, msg))
 
     def _MQTT_subscribe_thread(self):
