@@ -9,6 +9,8 @@ from ML_localisation import train_localisation_model
 from ML_localisation import loc_single_predict
 import sched
 import time
+import numpy as np
+import matplotlib.pyplot as plt
 
 #SQlite DB name
 Lora_GTW_DB = "lora_GTW.db"
@@ -64,12 +66,12 @@ def new_cell_for_ML(db_ids):
 	#Get the PKTs Longitude and Lattitude
 	curs.execute('SELECT pkt_longitude FROM Lora_Gateway_PKT_Data WHERE id ='+ str(db_ids[0]))
 	pkt_long = curs.fetchone()[0]
-	if pkt_long is None:
+	if (pkt_long is None) or (pkt_long == ""):
 		pkt_long = 0
 		
 	curs.execute('SELECT pkt_latitude FROM Lora_Gateway_PKT_Data WHERE id ='+ str(db_ids[0]))
 	pkt_lat = curs.fetchone()[0]
-	if pkt_lat is None:
+	if (pkt_lat is None) or (pkt_lat == ""):
 		pkt_lat = 0
 	
 	for x in db_ids:
@@ -105,7 +107,6 @@ def update_CSVs_from_DB():
 	DATA_to_GTW_CSV = []
 	DATA_to_NODE_CSV = []
 	node_matrix_ids = []
-	gtw_matrix_ids = []
 
 	while row <= max_id:
 		conn = sqlite3.connect(Lora_GTW_DB)
@@ -131,27 +132,17 @@ def update_CSVs_from_DB():
 				gw_check_id = Gateway_Check(pkt_data_one)
 				if gw_check_id != "Not Found":
 					DATA_to_GTW_CSV.append(new_cell_for_ML(pkt_matrix_ids))
-					gtw_matrix_ids.append(pkt_matrix_ids)
 				else:
-					if pkt_long is None:
+					if (pkt_long is None) or (pkt_long == ""):
 						DATA_to_NODE_CSV.append(new_cell_for_ML(pkt_matrix_ids))
 						node_matrix_ids.append(pkt_matrix_ids)
 	for x in range(0,len(node_matrix_ids)-1):
-		for y in range(x+1, (len(node_matrix_ids)-x)):
-			try:
-				if set(node_matrix_ids[x]).issuperset(set(node_matrix_ids[y])) :
-					del node_matrix_ids[y]
-					del DATA_to_NODE_CSV[y]
-			except:
-				print("reached end")
-	for x in range(0,len(gtw_matrix_ids)-1):
-		for y in range(x+1, (len(gtw_matrix_ids)-x)):
-			try:
-				if set(gtw_matrix_ids[x]).issuperset(set(gtw_matrix_ids[y])) :
-					del gtw_matrix_ids[y]
-					del DATA_to_GTW_CSV[y]
-			except:
-				print("reached end")
+		try:
+			if set(node_matrix_ids[x]).issuperset(set(node_matrix_ids[x+1])) :
+				del node_matrix_ids[x+1]
+				del DATA_to_NODE_CSV[x+1]
+		except:
+			print("reached end")
 	#Create CSV for Gateway data to train model
 	create_CSV(Lora_GTW_PP, DATA_to_GTW_CSV)
 	#Create CSV for Node data to query model
@@ -169,10 +160,31 @@ def update_SQL_DB_loc(node_loc_ARR, node_ID_ARR):
 	conn.commit()
 	conn.close()
 	
+def draw_gateways(dataP):
+	for i in range(0, len(dataP)):
+		plt.scatter(dataP[i][1], dataP[i][2], c=234, marker="D")
+		plt.pause(0.2)
+
+
+def draw_point(dataP):
+	for i in range(0, len(dataP)):
+		plt.scatter(dataP[i][0], dataP[i][1], marker="o")
+		plt.pause(0.05)
+
+def setup_plot():
+	plt.axis([0, 10, 0, 5])
+	plt.ion()
+	draw_gateways(Gw_Loc_db)
 #***************Main Code Here*********************************************************************************************
-node_loc_queries, node_matrix_id = update_CSVs_from_DB()
+
 #train_localisation_model()
-if len(node_loc_queries) > 0:
-	node_loc_answer = loc_single_predict(node_loc_queries)
-	update_SQL_DB_loc(node_loc_answer, node_matrix_id)
-	
+setup_plot()
+while True:
+	node_loc_queries, node_matrix_id = update_CSVs_from_DB()
+	print(node_loc_queries)
+	if len(node_loc_queries) > 0:
+		node_loc_answer = loc_single_predict(node_loc_queries)
+		draw_point(node_loc_answer)
+		update_SQL_DB_loc(node_loc_answer, node_matrix_id)
+	time.sleep(10)
+	print("Next Round")
