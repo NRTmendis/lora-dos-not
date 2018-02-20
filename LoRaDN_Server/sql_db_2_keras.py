@@ -9,8 +9,6 @@ from ML_localisation import train_localisation_model
 from ML_localisation import loc_single_predict
 import sched
 import time
-import numpy as np
-import matplotlib.pyplot as plt
 
 #SQlite DB name
 Lora_GTW_DB = "lora_GTW.db"
@@ -60,6 +58,7 @@ def new_cell_for_ML(db_ids):
 	conn = sqlite3.connect(Lora_GTW_DB)
 	curs = conn.cursor()
 	#Set all Gateway RSSI to -150dB, noise floor level
+	
 	Gw_RSSI = [-150]
 	for x in range(1, len(Gw_Loc_db)):
 		Gw_RSSI.append(-150)
@@ -80,15 +79,17 @@ def new_cell_for_ML(db_ids):
 		curs.execute('SELECT pkt_data FROM Lora_Gateway_PKT_Data WHERE id ='+ str(x))
 		pkt_data = curs.fetchone()[0]
 		gw_check_id = Gateway_Check(pkt_data)
+		curs.execute('SELECT pkt_rssi FROM Lora_Gateway_PKT_Data WHERE id ='+ str(x))
+		pkt_rssi = int(curs.fetchone()[0])
 		#Set RSSI values from gateways
 		for y in range(0, len(Gw_Loc_db)):
 			if Gw_Loc_db[y][0] == pkt_gtiD:
-				curs.execute('SELECT pkt_rssi FROM Lora_Gateway_PKT_Data WHERE id ='+ str(x))
-				pkt_rssi = int(curs.fetchone()[0])
-				Gw_RSSI[y] = pkt_rssi
+				Gw_RSSI[y] = pkt_rssi 
+				if gw_check_id == "Not Found":
+					Gw_RSSI[y] = pkt_rssi +50  #For non-antenna connections
 			if gw_check_id != "Not Found":
 				if Gw_Loc_db[y][0] == gw_check_id:
-					Gw_RSSI[y] = -20	#The packet was from a gateway so max dB set
+					Gw_RSSI[y] = -20 #The packet was from a gateway so max dB set
 	
 	new_cell_row = Gw_RSSI
 	new_cell_row.insert(0,(db_ids[0])) #Add iD to front
@@ -100,8 +101,10 @@ def new_cell_for_ML(db_ids):
 def update_CSVs_from_DB():
 	conn = sqlite3.connect(Lora_GTW_DB)
 	curs = conn.cursor()
+	curs.execute('INSERT INTO Lora_Gateway_PKT_Data DEFAULT VALUES')
 	curs.execute('SELECT max(id) FROM Lora_Gateway_PKT_Data')
 	max_id = int(curs.fetchone()[0])
+	curs.execute('DELETE FROM Lora_Gateway_PKT_Data WHERE id ='+ str(max_id))
 	conn.close()
 	row=1
 	DATA_to_GTW_CSV = []
@@ -111,6 +114,7 @@ def update_CSVs_from_DB():
 	while row <= max_id:
 		conn = sqlite3.connect(Lora_GTW_DB)
 		curs = conn.cursor()
+		curs.execute('INSERT INTO Lora_Gateway_PKT_Data DEFAULT VALUES')
 		curs.execute('SELECT pkt_data FROM Lora_Gateway_PKT_Data WHERE id ='+ str(row))
 		pkt_data_one = curs.fetchone()[0]
 		curs.execute('SELECT pkt_longitude FROM Lora_Gateway_PKT_Data WHERE id ='+ str(row))
@@ -125,6 +129,7 @@ def update_CSVs_from_DB():
 			pkt_data_query = curs.fetchone()[0]
 			if pkt_data_query == pkt_data_one:
 				pkt_matrix_ids.append(x)
+		curs.execute('DELETE FROM Lora_Gateway_PKT_Data WHERE id ='+ str(max_id))
 		conn.close()
 		row = row + 1
 		if pkt_matrix_ids is not None:
@@ -160,31 +165,16 @@ def update_SQL_DB_loc(node_loc_ARR, node_ID_ARR):
 	conn.commit()
 	conn.close()
 	
-def draw_gateways(dataP):
-	for i in range(0, len(dataP)):
-		plt.scatter(dataP[i][1], dataP[i][2], c=234, marker="D")
-		plt.pause(0.2)
-
-
-def draw_point(dataP):
-	for i in range(0, len(dataP)):
-		plt.scatter(dataP[i][0], dataP[i][1], marker="o")
-		plt.pause(0.05)
-
-def setup_plot():
-	plt.axis([0, 10, 0, 5])
-	plt.ion()
-	draw_gateways(Gw_Loc_db)
 #***************Main Code Here*********************************************************************************************
 
 #train_localisation_model()
-setup_plot()
 while True:
 	node_loc_queries, node_matrix_id = update_CSVs_from_DB()
 	print(node_loc_queries)
 	if len(node_loc_queries) > 0:
 		node_loc_answer = loc_single_predict(node_loc_queries)
-		draw_point(node_loc_answer)
+		print(node_loc_answer)
 		update_SQL_DB_loc(node_loc_answer, node_matrix_id)
-	time.sleep(10)
+	time.sleep(1)
 	print("Next Round")
+	

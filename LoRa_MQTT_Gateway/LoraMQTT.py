@@ -178,8 +178,12 @@ class NanoGateway:
 
     def _connect_to_wifi(self):
         self.wlan.connect(self.ssid, auth=(WLAN.WPA2_ENT, self.user, self.password ), identity=self.user)
+        conn_cc = 0
         while not self.wlan.isconnected():
             utime.sleep_ms(50)
+			conn_cc = conn_cc + 1
+            if (conn_cc > 200) :
+                machine.reset()
         self._log('WiFi connected to: {}', self.ssid)
 
     def _dr_to_sf(self, dr):
@@ -275,7 +279,7 @@ class NanoGateway:
         """
         Transmits a downlink message over LoRa.
         """
-
+        #Reset to transmit mode
         self.lora = LoRa(
             mode=LoRa.LORA,
             frequency=self.frequency,
@@ -289,6 +293,8 @@ class NanoGateway:
         self.lora_sock = usocket.socket(usocket.AF_LORA, usocket.SOCK_RAW)
         self.lora_sock.setblocking(False)
         self.lora_sock.send(data)
+        self._log('Transmitted packet: {}', data)
+        #Reset to receive mode
         self.lora = LoRa(
             mode=LoRa.LORA,
             frequency=self.frequency,
@@ -302,7 +308,15 @@ class NanoGateway:
 
     def process_msg(self, msg_instruction):
         in_data = msg_instruction
-        self.bcast_pkt_gtw_period = int(in_data)
+        try:
+            self.bcast_pkt_gtw_period = int(in_data)
+            self.stat_alarm.cancel()
+            sleep_time = int(machine.rng()/ (2**12))
+            utime.sleep_ms(sleep_time)
+            self.stat_alarm = Timer.Alarm(handler=lambda t: self._send_down_link(self._make_stat_packet(), self.datarate, self.frequency), s=self.bcast_pkt_gtw_period, periodic=True)
+        except Exception as ex:
+            self._log('Failed to process change of broadcast time alarm: {}', ex)
+		
 
     def sub_cb(self, topic, msg):
         try:
@@ -320,11 +334,17 @@ class NanoGateway:
             self.client.subscribe(self.tpc_mtce)
         except Exception as ex:
             self._log('Failed to subscribe to MQTT server: {}', ex)
+        fail_cc = 0
         while not self.MQTTsub_stop:
             try:
                 self.client.check_msg()
             except Exception as ex:
                 self._log('Failed to check message MQTT server: {}', ex)
+                fail_cc = fail_cc + 1
+                if (fail_cc >= 100) :
+                    self._log('Failed to check message MQTT server, Restarting Device: {}', ex)
+                    machine.reset() #Restart Board to try and re-connect to MQTT.
+                
 
     def _log(self, message, *args):
         """
