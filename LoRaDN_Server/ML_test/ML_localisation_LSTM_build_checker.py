@@ -10,12 +10,13 @@ from pandas import DataFrame
 from sklearn.externals import joblib
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_absolute_error
 from keras.models import load_model
 from keras.models import Sequential
 from keras.layers import Dense
 from keras.layers import LSTM
 
-Train_Now = False #Train or use model
+Train_Now = True #Train or use model
 
 # load dataset
 dataset = read_csv('lora_GTW_PP.csv', header=0, index_col=0)
@@ -30,7 +31,7 @@ joblib.dump(scaler, 'scaler.save')
 # split into train and test sets
 values = scaled
 if Train_Now:
-	pkt_ratio = 0.999
+	pkt_ratio = 0.75
 else:
 	pkt_ratio = 0.1
 n_train_pkts = int(len(values)*pkt_ratio)
@@ -49,9 +50,9 @@ if Train_Now:
 	model = Sequential()
 	model.add(LSTM(500, input_shape=(train_X.shape[1], train_X.shape[2])))
 	model.add(Dense(2))
-	model.compile(loss='mean_squared_error', optimizer='adam')
+	model.compile(loss='mean_absolute_error', optimizer='adam', metrics=['accuracy'])
 	# fit network
-	history = model.fit(train_X, train_y, epochs=500, batch_size=72, validation_data=(test_X, test_y), verbose=1, shuffle=True)
+	history = model.fit(train_X, train_y, epochs=150, batch_size=72, validation_data=(test_X, test_y), verbose=1, shuffle=True)
 	model.save('localisation_model.h5')
 else:
 	model = load_model('localisation_model.h5')
@@ -72,11 +73,22 @@ inv_y = scaler.inverse_transform(inv_y)
 inv_y = inv_y[:,-2:]
 print(inv_y)
 # calculate RMSE
-rmse = sqrt(mean_squared_error(inv_y, inv_yhat))
-print('Test RMSE: %.3f' % rmse)
+mae = mean_absolute_error(inv_y, inv_yhat)
+print('Test MAE: %.3f' % mae)
 
 # plot history
-#pyplot.plot(history.history['loss'], label='train')
-#pyplot.plot(history.history['val_loss'], label='test')
-#pyplot.legend()
-#pyplot.show()
+pyplot.plot(history.history['acc'])
+pyplot.plot(history.history['val_acc'])
+pyplot.title('model accuracy')
+pyplot.ylabel('accuracy')
+pyplot.xlabel('epoch')
+pyplot.legend(['train', 'test'], loc='upper left')
+pyplot.show()
+# summarize history for loss
+pyplot.plot(history.history['loss'])
+pyplot.plot(history.history['val_loss'])
+pyplot.title('model loss')
+pyplot.ylabel('loss')
+pyplot.xlabel('epoch')
+pyplot.legend(['train', 'test'], loc='upper left')
+pyplot.show()

@@ -181,7 +181,7 @@ class NanoGateway:
         conn_cc = 0
         while not self.wlan.isconnected():
             utime.sleep_ms(50)
-			conn_cc = conn_cc + 1
+            conn_cc = conn_cc + 1
             if (conn_cc > 200) :
                 machine.reset()
         self._log('WiFi connected to: {}', self.ssid)

@@ -20,10 +20,10 @@ Lora_GTW_PP = "lora_GTW_PP.csv"
 Lora_NODE_PP = "Lora_NODE_PP.csv"
 
 Gw_Loc_db = [
-		["240AC4F01E023C54",9.05,4.58],	#A
-		["240AC4F01E0286DC",9.05,1.5],	#B
-		["240AC4F01E025FF4",0.66,4.58],	#C
-		["240AC4F01E023E3C",0.66,0.33]	#D
+		["240AC4F01E023C54",6.738,12.291],
+		["240AC4F01E0286DC",7.34,0.555],
+		["240AC4F01E025FF4",0.363,11.976],
+		["240AC4F01E023E3C",0.733,0.531]
 	    ]
 		
 def Gateway_Check(jsonData):
@@ -86,7 +86,7 @@ def new_cell_for_ML(db_ids):
 			if Gw_Loc_db[y][0] == pkt_gtiD:
 				Gw_RSSI[y] = pkt_rssi 
 				if gw_check_id == "Not Found":
-					Gw_RSSI[y] = pkt_rssi +50  #For non-antenna connections
+					Gw_RSSI[y] = pkt_rssi + 60 #For non-antenna connections
 			if gw_check_id != "Not Found":
 				if Gw_Loc_db[y][0] == gw_check_id:
 					Gw_RSSI[y] = -20 #The packet was from a gateway so max dB set
@@ -101,10 +101,8 @@ def new_cell_for_ML(db_ids):
 def update_CSVs_from_DB():
 	conn = sqlite3.connect(Lora_GTW_DB)
 	curs = conn.cursor()
-	curs.execute('INSERT INTO Lora_Gateway_PKT_Data DEFAULT VALUES')
 	curs.execute('SELECT max(id) FROM Lora_Gateway_PKT_Data')
-	max_id = int(curs.fetchone()[0])
-	curs.execute('DELETE FROM Lora_Gateway_PKT_Data WHERE id ='+ str(max_id))
+	max_id = int(curs.fetchone()[0])+1
 	conn.close()
 	row=1
 	DATA_to_GTW_CSV = []
@@ -148,6 +146,9 @@ def update_CSVs_from_DB():
 				del DATA_to_NODE_CSV[x+1]
 		except:
 			print("reached end")
+	conn = sqlite3.connect(Lora_GTW_DB)
+	curs = conn.cursor()
+	conn.close()
 	#Create CSV for Gateway data to train model
 	create_CSV(Lora_GTW_PP, DATA_to_GTW_CSV)
 	#Create CSV for Node data to query model

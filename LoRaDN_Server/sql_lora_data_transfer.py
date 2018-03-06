@@ -10,10 +10,10 @@ Lora_GTW_DB = "lora_GTW.db"
 #Gateway Locations (Change according to preset location)
 #		[Gateway ID,	Lattitude, Longitude]
 Gw_Loc_db = [
-		["240AC4F01E023C54",9.05,4.58],
-		["240AC4F01E0286DC",9.05,1.5],
-		["240AC4F01E025FF4",0.66,4.58],
-		["240AC4F01E023E3C",0.66,0.33]
+		["240AC4F01E023C54",6.738,12.291],
+		["240AC4F01E0286DC",7.34,0.555],
+		["240AC4F01E025FF4",0.363,11.976],
+		["240AC4F01E023E3C",0.733,0.531]
 	    ]
 
 
