@@ -16,7 +16,8 @@ import { Divider } from 'material-ui/Divider';
 const styles = {
     msgContainer: {
         display: `flex`,
-        flexDirection: `column`
+        flexDirection: `column`,
+        marginBottom: `0.5em`
     }
 }
 
@@ -26,14 +27,13 @@ export default (props) => (
         onClose={props.handleDialog}
     >
         <DialogTitle>Update Gateway Parameters</DialogTitle>
-        <DialogContent>
+        <DialogContent style={styles.msgContainer}>
             <DialogContentText>
                 Update the broadcast rate or angle or a a gateway through the MQTT server.
             </DialogContentText>
             <TextField
                 id="gateway"
-                label="Gateway"
-                value={"All"}
+                label="Gateway - All"
                 disabled
             />
             <TextField

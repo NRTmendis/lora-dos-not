@@ -13,7 +13,6 @@ import './App.css';
 import worldsData from "./worlds.json";
 
 // Material-UI
-import Card, { CardContent } from 'material-ui/Card';
 import AppBar from 'material-ui/AppBar';
 import Toolbar from 'material-ui/Toolbar';
 import 'typeface-roboto'
@@ -31,6 +30,7 @@ import Divider from 'material-ui/Divider';
 
 // Components
 import MessageInterface from './components/MessageInterface/MessageInterface';
+import NodeInfo from './components/NodeInfo/NodeInfo';
 
 const socket = openSocket('http://localhost:5000');
 
@@ -44,7 +44,7 @@ class App extends Component {
       world: "floor7labs",
       broadcastRate: 60,
       angle: 0,
-      drawerOpen: false,
+      drawerOpen: true,
       antennaDialogOpen: false
     };
   }
@@ -72,7 +72,7 @@ class App extends Component {
     nodes: update(this.state.nodes, {
       [node.NiD]: {
         $set: {
-          "lval": node.LVal,
+          "lightVal": node.LVal,
           "lng": node.lng,
           "lat": node.lat
         }
@@ -142,25 +142,25 @@ class App extends Component {
         >
           <IconButton
             onClick={this.handleDrawer}
-            style={{ width: `100` }}
+            style={{ width: `100%`, height: `8%` }}
+          // TODO: Height currently a hack, add theme.mixins.toolbar + withStyles
           >
             <ChevronRightIcon />
           </IconButton>
           <Divider />
           <Typography variant="title">Nodes</Typography>
-          <div style={{ display: `flex`, marginRight: `0.5em`, flexWrap: `wrap`, width: `15em`, flexDirection: `column` }}>
+          <div style={{ display: `flex`, flexWrap: `wrap`, width: `15em`, flexDirection: `column` }}>
             {Object.keys(this.state.nodes).map(id => (
-              <Card key={id} style={{ marginBottom: `0.5em` }}>
-                <CardContent>
-                  <Typography component="h3">NiD: {id}</Typography>
-                  <Typography>LVal: {this.state.nodes[id].lval}</Typography>
-                </CardContent>
-              </Card>
+              <NodeInfo
+                key={id}
+                nodeID={id}
+                lightVal={this.state.nodes[id].lightVal}
+              />
             ))}
           </div>
         </Drawer>
       </Hidden>
-      <ScatterChart width={1200} height={700}>
+      <ScatterChart width={1150} height={700}>
         <CartesianAxis strokeDasharray="3 3" />
         <XAxis dataKey={"lng"} type="number" name="lng" unit="m" />
         <YAxis dataKey={"lat"} type="number" name="lat" unit="m" />
