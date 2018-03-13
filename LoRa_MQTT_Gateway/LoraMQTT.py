@@ -15,6 +15,7 @@ from micropython import const
 from network import LoRa
 from network import WLAN
 from machine import Timer
+from machine import PWM
 from simple import  MQTTClient
 
 PROTOCOL_VERSION = const(2)
@@ -64,7 +65,7 @@ class NanoGateway:
     Configuration requried in config.py for wifi access and MQTT server connections and LoRa frequency.
     """
 
-    def __init__(self, id, frequency, datarate, ssid, user, password, server, port, tpc_snd, tpc_mtce, ntp_server='pool.ntp.org', ntp_period=3600, bcast_pkt_gtw_period=60):
+    def __init__(self, id, frequency, datarate, ssid, user, password, server, port, tpc_snd, tpc_mtce, ntp_server='pool.ntp.org', ntp_period=3600, bcast_pkt_gtw_period=60, cur_angle=0):
         self.id = id
         self.server = server
         self.port = port
@@ -93,6 +94,8 @@ class NanoGateway:
         self.sock = None
 
         self.bcast_pkt_gtw_period = bcast_pkt_gtw_period
+
+        self.cur_angle = cur_angle
 
         #maintnenace MQTT subscription flag
         self.MQTTsub_stop = False
@@ -268,6 +271,31 @@ class NanoGateway:
         RX_PK["size"] = len(rx_data)
         return ujson.dumps(RX_PK)
 
+    def set_angle(self, new_angle = 0, current_angle = 0):
+        pwm = PWM(0, frequency=50)  # use PWM timer 0, with a frequency of 5KHz
+        # create pwm channel on pin P12 with a duty cycle of 50%
+        pwm_c = pwm.channel(0, pin='P12', duty_cycle=0.5)
+        
+        degrees = new_angle - current_angle
+        if (abs(degrees) >= 360):
+            degrees = new_angle + current_angle
+        print(degrees)
+        if (degrees >= 0):
+            print("Forward")
+            pwm_c.duty_cycle(0.074) #Clockwise Rotation
+            degrees = abs(degrees)
+            time_angle = int((float(degrees)/360)*3860)
+            utime.sleep_ms(time_angle)
+            pwm_c.duty_cycle(0.0) 
+        else:
+            print("Reverse")
+            pwm_c.duty_cycle(0.078) #Anti-Clockwise Rotation
+            degrees = abs(degrees)
+            time_angle = int((float(degrees)/360)*2540)
+            utime.sleep_ms(time_angle)
+            pwm_c.duty_cycle(0.0) 
+        return(new_angle)
+
     def _push_data(self, data):
         packet = data
         try:
@@ -307,9 +335,13 @@ class NanoGateway:
             )
 
     def process_msg(self, msg_instruction):
-        in_data = msg_instruction
         try:
-            self.bcast_pkt_gtw_period = int(in_data)
+            in_data = ubinascii.a2b_base64(msg_instruction)
+            pp_data = ujson.loads(in_data)
+            in_Brate = pp_data['Broadcast_Rate']
+            in_Angle = pp_data['M_Angle']
+            self.cur_angle = self.set_angle(int(in_Angle), self.cur_angle) 
+            self.bcast_pkt_gtw_period = int(in_Brate)
             self.stat_alarm.cancel()
             sleep_time = int(machine.rng()/ (2**12))
             utime.sleep_ms(sleep_time)
