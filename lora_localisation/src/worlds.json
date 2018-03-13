@@ -1,4 +1,29 @@
 {
+    "room422": {
+        "name": "Room 422",
+        "gateways": {
+            "240AC4F01E023E3C": {
+                "lng": 8.152,
+                "lat": 0,
+                "isServo": false
+            },
+            "240AC4F01E025FF4": {
+                "lng": 0.567,
+                "lat": 7.866,
+                "isServo": false
+            },
+            "240AC4F01E0286DC": {
+                "lng": 8.248,
+                "lat": 7.756,
+                "isServo": false
+            },
+            "240AC4F01E023C54": {
+                "lng": 0.422,
+                "lat": 0,
+                "isServo": false
+            }
+        }
+    },
     "floor7labs": {
         "name": "7th Floor Computer Labs",
         "gateways": {
