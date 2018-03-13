@@ -1,0 +1,52 @@
+{
+    "floor7labs": {
+        "name": "7th Floor Computer Labs",
+        "gateways": {
+            "240AC4F01E023E3C": {
+                "lng": 0.531,
+                "lat": 0.733,
+                "isServo": false
+            },
+            "240AC4F01E025FF4": {
+                "lng": 11.976,
+                "lat": 0.363,
+                "isServo": false
+            },
+            "240AC4F01E0286DC": {
+                "lng": 0.555,
+                "lat": 7.34,
+                "isServo": false
+            },
+            "240AC4F01E023C54": {
+                "lng": 12.291,
+                "lat": 6.738,
+                "isServo": false
+            }
+        }
+    },
+    "floor9labs": {
+        "name": "9th Floor Masters' Labs",
+        "gateways": {
+            "240AC4F01E023E3C": {
+                "lng": 0.66,
+                "lat": 0.33,
+                "isServo": false
+            },
+            "240AC4F01E025FF4": {
+                "lng": 0.55,
+                "lat": 4.58,
+                "isServo": false
+            },
+            "240AC4F01E0286DC": {
+                "lng": 9.05,
+                "lat": 1.50,
+                "isServo": false
+            },
+            "240AC4F01E023C54": {
+                "lng": 9.05,
+                "lat": 4.58,
+                "isServo": false
+            }
+        }
+    }
+}
