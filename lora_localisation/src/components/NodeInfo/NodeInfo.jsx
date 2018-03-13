@@ -2,7 +2,7 @@ import React from 'react';
 
 // Material-UI
 import Typography from 'material-ui/Typography';
-import Card, { CardActions, CardContent } from 'material-ui/Card';
+import Card, { CardContent } from 'material-ui/Card';
 import { LinearProgress } from 'material-ui/Progress';
 
 const MAX_LIGHT_VAL = 512 // TODO: Actual value is 4096, change during actual use.

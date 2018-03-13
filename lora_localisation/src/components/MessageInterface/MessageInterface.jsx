@@ -3,14 +3,12 @@ import React from 'react';
 // Material-UI
 import Button from 'material-ui/Button';
 import TextField from 'material-ui/TextField';
-import Typography from 'material-ui/Typography';
 import Dialog, {
     DialogTitle,
     DialogActions,
     DialogContent,
     DialogContentText
 } from 'material-ui/Dialog';
-import { Divider } from 'material-ui/Divider';
 // import Icon from 'material-ui/Icon';
 
 const styles = {
@@ -29,7 +27,7 @@ export default (props) => (
         <DialogTitle>Update Gateway Parameters</DialogTitle>
         <DialogContent style={styles.msgContainer}>
             <DialogContentText>
-                Update the broadcast rate or angle or a a gateway through the MQTT server.
+                Update the broadcast rate or angle of a gateway through the MQTT server.
             </DialogContentText>
             <TextField
                 id="gateway"

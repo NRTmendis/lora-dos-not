@@ -10,7 +10,8 @@
     "react-dom": "^16.2.0",
     "recharts": "^1.0.0-beta.10",
     "socket.io": "^2.0.4",
-    "typeface-roboto": "0.0.54"
+    "typeface-roboto": "0.0.54",
+    "victory": "^0.25.6"
   },
   "devDependencies": {
     "react-scripts": "1.1.1"

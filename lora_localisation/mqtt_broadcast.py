@@ -31,7 +31,6 @@ def _make_mtce_packet(gateway, M_Angle, Broadcast_Rate):
 
 def on_connect(client, userdata, rc):
     if rc != 0:
-        pass
         log("Unable to connect to MQTT Broker...")
     else:
         log("Connected with MQTT Broker: {}".format(str(M_Broker)))

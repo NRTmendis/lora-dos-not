@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 import update from 'immutability-helper';
+// Recharts
 import {
   Scatter,
   ScatterChart,
@@ -8,6 +9,13 @@ import {
   Legend,
   Tooltip
 } from 'recharts';
+
+// Victory (Formidable)
+import {
+  VictoryChart,
+  VictoryScatter,
+} from 'victory';
+
 import openSocket from 'socket.io-client';
 import './App.css';
 import worldsData from "./worlds.json";
@@ -86,7 +94,7 @@ class App extends Component {
 
 
   populateGateways = worldName => this.setState({
-    gateways: worldsData[worldName]
+    gateways: worldsData[worldName].gateways
   })
 
   sendMessageJSON = () => socket.emit('gatewayUpdate', JSON.stringify({
@@ -112,8 +120,9 @@ class App extends Component {
             onChange={this.handleWorldChange}
             ref={node => (this.worldSelector = node)}
           >
-            <MenuItem value="floor7labs">7th Floor Computer Labs</MenuItem>
-            <MenuItem value="floor9labs">9th Floor Masters' Labs</MenuItem>
+            {Object.keys(worldsData).map(world => (
+              <MenuItem key={world} value={world}>{worldsData[world].name}</MenuItem>
+            ))}
           </Select>
           <IconButton
             color="inherit"
@@ -145,10 +154,10 @@ class App extends Component {
             style={{ width: `100%`, height: `8%` }}
           // TODO: Height currently a hack, add theme.mixins.toolbar + withStyles
           >
+            <Typography variant="title">Nodes</Typography>
             <ChevronRightIcon />
           </IconButton>
           <Divider />
-          <Typography variant="title">Nodes</Typography>
           <div style={{ display: `flex`, flexWrap: `wrap`, width: `15em`, flexDirection: `column` }}>
             {Object.keys(this.state.nodes).map(id => (
               <NodeInfo
@@ -160,6 +169,20 @@ class App extends Component {
           </div>
         </Drawer>
       </Hidden>
+      <VictoryChart size={2}>
+        <VictoryScatter
+          data={Object.values(this.state.gateways)}
+          x="lng"
+          y="lat"
+        />
+        <VictoryScatter
+          data={Object.values(this.state.nodes)}
+          size={2}
+          style={{ data: { fill: `red` } }}
+          x="lng"
+          y="lat"
+        />
+      </VictoryChart>
       <ScatterChart width={1150} height={700}>
         <CartesianAxis strokeDasharray="3 3" />
         <XAxis dataKey={"lng"} type="number" name="lng" unit="m" />
