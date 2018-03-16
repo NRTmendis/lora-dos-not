@@ -164,12 +164,16 @@ class App extends Component {
                 key={id}
                 nodeID={id}
                 lightVal={this.state.nodes[id].lightVal}
+                location={{
+                  lat: this.state.nodes[id].lat,
+                  lng: this.state.nodes[id].lng
+                }}
               />
             ))}
           </div>
         </Drawer>
       </Hidden>
-      <VictoryChart size={2}>
+      {/* <VictoryChart size={2}>
         <VictoryScatter
           data={Object.values(this.state.gateways)}
           x="lng"
@@ -182,7 +186,7 @@ class App extends Component {
           x="lng"
           y="lat"
         />
-      </VictoryChart>
+      </VictoryChart> */}
       <ScatterChart width={1150} height={700}>
         <CartesianAxis strokeDasharray="3 3" />
         <XAxis dataKey={"lng"} type="number" name="lng" unit="m" />

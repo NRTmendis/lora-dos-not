@@ -20,6 +20,7 @@ export default (props) => (
                 valueBuffer={MAX_LIGHT_VAL}
                 color="secondary"
             />
+            <p>{props.location.lng}, {props.location.lat}</p>
         </CardContent>
     </Card>
 )

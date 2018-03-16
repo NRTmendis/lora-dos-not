@@ -40,7 +40,7 @@ app = Flask(__name__)
 socketio = SocketIO(app)
 # CORS(app)
 
-conn = sqlite3.connect('lora_GTW.db')
+conn = sqlite3.connect('../LoRaDN_Server/lora_GTW.db')
 c = conn.cursor()
 
 
