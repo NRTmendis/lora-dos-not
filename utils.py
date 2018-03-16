@@ -28,8 +28,3 @@ def get_gateways(world_code, lists=False):
         return listify(get_world(world_code)['gateways'])
     else:
         return get_world(world_code)['gateways']
-
-
-# print(listify(get_world('floor7labs')['gateways']))
-# print(get_current_model(), type(get_current_model()))
-# print(get_current_world(), type(get_current_world()))
