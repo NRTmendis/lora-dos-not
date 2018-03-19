@@ -11,14 +11,14 @@ import {
 } from 'recharts';
 
 // Victory (Formidable)
-import {
-  VictoryChart,
-  VictoryScatter,
-} from 'victory';
+// import {
+//   VictoryChart,
+//   VictoryScatter,
+// } from 'victory';
 
 import openSocket from 'socket.io-client';
 import './App.css';
-import worldsData from "./worlds.json";
+import worldsData from "./worlds.json"
 
 // Material-UI
 import AppBar from 'material-ui/AppBar';
@@ -48,7 +48,6 @@ class App extends Component {
     this.state = {
       nodes: {},
       gateways: {},
-      currId: 0,
       world: "floor7labs",
       broadcastRate: 60,
       angle: 0,
@@ -59,13 +58,12 @@ class App extends Component {
 
   componentDidMount = () => {
     this.populateGateways(this.state.world);
-    socket.on('nodeFound', node => {
-      this.handleReceivedNode(node);
-    });
-    socket.on('currIdChange', newCurrId => {
-      this.handleCurrIdUpdate(newCurrId);
-    });
-    setInterval(() => socket.emit('update', this.state.currId), 500);
+    socket.on('nodeUpdate', newNodes => this.setState({
+      nodes: update(this.state.nodes, {
+        $set: newNodes
+      })
+    }))
+    setInterval(() => socket.emit('update'), 500);
   }
 
   handleCurrIdUpdate = newCurrId => this.setState({
@@ -76,22 +74,17 @@ class App extends Component {
     [type]: event.target.value
   }, console.log(type, "has been changed to", event.target.value, "."))
 
-  handleReceivedNode = node => this.setState({
-    nodes: update(this.state.nodes, {
-      [node.NiD]: {
-        $set: {
-          "lightVal": node.LVal,
-          "lng": node.lng,
-          "lat": node.lat
-        }
-      }
-    })
-  })
-
   handleWorldChange = event => this.setState({
     world: event.target.value
   }, () => this.populateGateways(this.state.world))
 
+  // populateGateways = worldName => fetch('../../worlds.json', {
+  //   headers: {
+  //     'content-type': 'application/json'
+  //   },
+  // })
+  //   .then(response => response.text())
+  //   .then(json => console.log(json))
 
   populateGateways = worldName => this.setState({
     gateways: worldsData[worldName].gateways
