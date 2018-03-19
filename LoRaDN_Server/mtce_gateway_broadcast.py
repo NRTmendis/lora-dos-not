@@ -42,7 +42,7 @@ def publish(topic, message):
 	mqttc.publish(topic,message)
 	print ("Published message on MQTT Topic: " + str(topic))
 
-def publish_MTCE_INFO_2_Gateways(recepient="All", M_Angle="Nan", Broadcast_Rate=60):
+def publish_MTCE_INFO_2_Gateways(recepient="All", M_Angle=0, Broadcast_Rate=60):
 	MTCE_pkt = _make_mtce_packet(recepient, M_Angle, Broadcast_Rate)
 	print("Packet Made")
 	print(MTCE_pkt)
@@ -59,6 +59,11 @@ mqttc.connect(M_Broker, int(M_Port), int(Keep_Alive))
 
 eggs=True
 while (eggs==True):
+	mqttc = mqtt.Client()
+	mqttc.on_connect = on_connect
+	mqttc.on_disconnect = on_disconnect
+	mqttc.on_publish = on_publish
+	mqttc.connect(M_Broker, int(M_Port), int(Keep_Alive))	
 	b_rate = input("What period would you like to set the LoRa Broadcast rate of the gateways?")
 	try:
 		b_rate_num = int(b_rate)
