@@ -28,12 +28,12 @@
         "name": "7th Floor Computer Labs",
         "gateways": {
             "240AC4F01E023E3C": {
-                "lng": 0.531,
+                "lng": 0.231,
                 "lat": 0.733,
                 "isServo": false
             },
             "240AC4F01E025FF4": {
-                "lng": 11.976,
+                "lng": 12.176,
                 "lat": 0.363,
                 "isServo": false
             },
@@ -43,7 +43,7 @@
                 "isServo": false
             },
             "240AC4F01E023C54": {
-                "lng": 12.291,
+                "lng": 12.176,
                 "lat": 6.738,
                 "isServo": false
             }
