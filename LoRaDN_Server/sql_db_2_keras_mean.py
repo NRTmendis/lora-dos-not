@@ -115,7 +115,7 @@ def new_cell_for_ML(db_ids):
             if Gw_Loc_db[y][0] == pkt_gtiD:
                 Gw_RSSI[y] = pkt_rssi
                 if gw_check_id == "Not Found":
-                    Gw_RSSI[y] = pkt_rssi  # +60 For non-antenna connections
+                    Gw_RSSI[y] = pkt_rssi +60  # +60 For non-antenna connections
             if gw_check_id != "Not Found":
                 if Gw_Loc_db[y][0] == gw_check_id:
                     # The packet was from a gateway so max dB set
@@ -219,7 +219,7 @@ def update_SQL_DB_loc(node_loc_ARR, node_ID_ARR):
 
 row_num = 1
 node_loc_queries, node_matrix_id, row_num = update_CSVs_from_DB(row_num)
-train_localisation_model()
+#train_localisation_model()
 while True:
     node_loc_queries, node_matrix_id, row_num = update_CSVs_from_DB(row_num)
     print(node_loc_queries)
