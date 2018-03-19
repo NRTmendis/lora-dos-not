@@ -2,6 +2,7 @@
 # SQL DB data to Machine Learning CSV format parser
 # Nissanka Mendis 2018 Feb.
 
+import os
 import sqlite3
 import csv
 import json
@@ -9,6 +10,7 @@ from ML_localisation import train_localisation_model
 from ML_localisation import loc_single_predict
 import sched
 import time
+import numpy
 import sys
 sys.path.insert(1, '..')
 from utils import get_current_world, get_gateways
@@ -25,7 +27,16 @@ Lora_GTW_PP = "lora_GTW_PP.csv"
 # PKT query CSV Out name
 Lora_NODE_PP = "Lora_NODE_PP.csv"
 
+# Room 710
 Gw_Loc_db = get_gateways(CURRENT_WORLD, lists=True)
+
+# Room 422
+# Gw_Loc_db = [
+#		["240AC4F01E023C54",0,0.422],
+#		["240AC4F01E0286DC",7.756,8.248],
+#		["240AC4F01E025FF4",7.866,0.567],
+#		["240AC4F01E023E3C",0,8.152]
+#	    ]
 
 
 def Gateway_Check(jsonData):
@@ -40,20 +51,29 @@ def Gateway_Check(jsonData):
         return ("Not Found")  # Not a gateway packet
 
 
-def create_CSV(csvfile, DATA_to_CSV):
+def create_CSV(csvfile, DATA_to_CSV, AppendWrite=True):
     try:
-        max_GW = len(DATA_to_CSV[0]) - 3  # 3 rows are not gateway rssi
+        max_GW = len(DATA_to_CSV[0]) - 4  # 4 rows are not gateway rssi
     except:
         return
     CSV_header = ["iD"]
     for x in range(0, max_GW):
         CSV_header.append("GW_RSSI_" + str(x + 1))
+    CSV_header.append("GW_Mean")
     CSV_header.append("GW_Long")
     CSV_header.append("GW_Lat")
+    append_write = 'w'
+    if AppendWrite:
+        if os.path.exists(csvfile):
+            append_write = 'a'  # append if already exists
+            AppendWrite = True
+        else:
+            AppendWrite = False
     # Write to CSV
-    with open(csvfile, 'w', newline='') as out_csv_file:
+    with open(csvfile, append_write, newline='') as out_csv_file:
         csv_out = csv.writer(out_csv_file)
-        csv_out.writerow(CSV_header)
+        if not AppendWrite:
+            csv_out.writerow(CSV_header)
         csv_out.writerows(DATA_to_CSV)
 
 
@@ -95,27 +115,35 @@ def new_cell_for_ML(db_ids):
             if Gw_Loc_db[y][0] == pkt_gtiD:
                 Gw_RSSI[y] = pkt_rssi
                 if gw_check_id == "Not Found":
-                    Gw_RSSI[y] = pkt_rssi + 60  # For non-antenna connections
+                    Gw_RSSI[y] = pkt_rssi  # +60 For non-antenna connections
             if gw_check_id != "Not Found":
                 if Gw_Loc_db[y][0] == gw_check_id:
                     # The packet was from a gateway so max dB set
                     Gw_RSSI[y] = -20
 
+    # Mean value and scaling formatting
+    np_Gw_RSSI = numpy.asarray(Gw_RSSI)
+    mean_Gw_RSSI = list(filter(lambda a: a != -150, Gw_RSSI))
+    mean_RSSI = numpy.mean(numpy.asarray(mean_Gw_RSSI))
+    #np_Gw_RSSI = np_Gw_RSSI - mean_RSSI
+    #Gw_RSSI = np_Gw_RSSI.tolist()
+
     new_cell_row = Gw_RSSI
     new_cell_row.insert(0, (db_ids[0]))  # Add iD to front
+    new_cell_row.append(mean_RSSI)
     new_cell_row.append(pkt_long)
     new_cell_row.append(pkt_lat)
     conn.close()
     return (new_cell_row)
 
 
-def update_CSVs_from_DB():
+def update_CSVs_from_DB(row_num):
     conn = sqlite3.connect(Lora_GTW_DB)
     curs = conn.cursor()
     curs.execute('SELECT max(id) FROM Lora_Gateway_PKT_Data')
     max_id = int(curs.fetchone()[0]) + 1
     conn.close()
-    row = 1
+    row = row_num
     DATA_to_GTW_CSV = []
     DATA_to_NODE_CSV = []
     node_matrix_ids = []
@@ -166,10 +194,10 @@ def update_CSVs_from_DB():
     curs = conn.cursor()
     conn.close()
     # Create CSV for Gateway data to train model
-    create_CSV(Lora_GTW_PP, DATA_to_GTW_CSV)
+    create_CSV(Lora_GTW_PP, DATA_to_GTW_CSV, True)
     # Create CSV for Node data to query model
-    create_CSV(Lora_NODE_PP, DATA_to_NODE_CSV)
-    return (DATA_to_NODE_CSV, node_matrix_ids)
+    create_CSV(Lora_NODE_PP, DATA_to_NODE_CSV, False)
+    return (DATA_to_NODE_CSV, node_matrix_ids, (max_id - 1))
 
 # Update the SQL database with the estimated locations
 
@@ -189,9 +217,11 @@ def update_SQL_DB_loc(node_loc_ARR, node_ID_ARR):
 #***************Main Code Here*********************************************************************************************
 
 
-# train_localisation_model()
+row_num = 1
+node_loc_queries, node_matrix_id, row_num = update_CSVs_from_DB(row_num)
+#train_localisation_model()
 while True:
-    node_loc_queries, node_matrix_id = update_CSVs_from_DB()
+    node_loc_queries, node_matrix_id, row_num = update_CSVs_from_DB(row_num)
     print(node_loc_queries)
     if len(node_loc_queries) > 0:
         node_loc_answer = loc_single_predict(node_loc_queries)
