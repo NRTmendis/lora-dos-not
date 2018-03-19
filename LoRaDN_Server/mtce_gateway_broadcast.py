@@ -24,7 +24,7 @@ def _make_mtce_packet(gateway,M_Angle,Broadcast_Rate):
 	MTCE_PK["Broadcast_Rate"] = int(Broadcast_Rate)
 	return json.dumps(MTCE_PK)
 		
-def on_connect(client, userdata, rc):
+def on_connect(client, userdata, flags, rc):
 	if rc != 0:
 		pass
 		print("Unable to connect to MQTT Broker...")
@@ -52,18 +52,14 @@ def publish_MTCE_INFO_2_Gateways(recepient="All", M_Angle=0, Broadcast_Rate=60):
 	
 
 mqttc = mqtt.Client()
+mqttc.loop_start()
 mqttc.on_connect = on_connect
 mqttc.on_disconnect = on_disconnect
 mqttc.on_publish = on_publish
 mqttc.connect(M_Broker, int(M_Port), int(Keep_Alive))	
 
 eggs=True
-while (eggs==True):
-	mqttc = mqtt.Client()
-	mqttc.on_connect = on_connect
-	mqttc.on_disconnect = on_disconnect
-	mqttc.on_publish = on_publish
-	mqttc.connect(M_Broker, int(M_Port), int(Keep_Alive))	
+while (eggs==True):	
 	b_rate = input("What period would you like to set the LoRa Broadcast rate of the gateways?")
 	try:
 		b_rate_num = int(b_rate)
