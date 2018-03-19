@@ -29,7 +29,7 @@ def _make_mtce_packet(gateway, M_Angle, Broadcast_Rate):
     return json.dumps(MTCE_PK)
 
 
-def on_connect(client, userdata, rc):
+def on_connect(client, userdata, flags, rc):
     if rc != 0:
         log("Unable to connect to MQTT Broker...")
     else:
@@ -37,7 +37,7 @@ def on_connect(client, userdata, rc):
 
 
 def on_publish(client, userdata, mid):
-    pass
+    log("Published packet to MQTT Topic")
 
 
 def on_disconnect(client, userdata, rc):
@@ -47,7 +47,7 @@ def on_disconnect(client, userdata, rc):
 
 def publish(client, topic, message):
     client.publish(topic, message)
-    log("Published packet to MQTT Topic: {}".format(str(topic)))
+    # log("Published packet to MQTT Topic: {}".format(str(topic)))
 
 
 def publish_MTCE_INFO_2_Gateways(client, recepient="All", m_angle="Nan",
