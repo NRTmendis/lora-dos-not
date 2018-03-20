@@ -13,6 +13,7 @@ from sklearn.externals import joblib
 from keras.models import load_model
 from keras.models import Sequential
 from keras.layers import Dense, Dropout, MaxPooling2D, BatchNormalization
+from keras.callbacks import ModelCheckpoint
 from keras.layers import LSTM
 from time import strftime
 import sys
@@ -56,9 +57,12 @@ def train_localisation_model(epCH=500, CSV_file='lora_GTW_PP.csv'):
     model.add(Dense(2, activation='softmax'))
     model.compile(loss='mean_squared_error',
                   optimizer='adam', metrics=['accuracy'])
+    # to save best model
+    checkpointer = ModelCheckpoint(
+        filepath='/tmp/weights.hdf5', verbose=1, save_best_only=True)
     # fit network
     model.fit(train_X, train_y, epochs=epCH,
-              batch_size=72, verbose=1, shuffle=True)
+              batch_size=72, verbose=1, shuffle=True, callbacks=[checkpointer])
     # save model
     model.save("{}_{}{}".format(CURRENT_WORLD,
                                 current_time, ".h5"))
