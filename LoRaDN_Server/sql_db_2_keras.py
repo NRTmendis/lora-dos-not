@@ -229,12 +229,12 @@ def update_SQL_DB_loc(node_loc_ARR, node_ID_ARR):
 row_num = 1
 node_loc_queries, node_matrix_id, row_num = update_CSVs_from_DB(row_num)
 #train_localisation_model()
-#while True:
-#    node_loc_queries, node_matrix_id, row_num = update_CSVs_from_DB(row_num)
-#    print(node_loc_queries)
-#    if len(node_loc_queries) > 0:
-#        node_loc_answer = loc_single_predict(node_loc_queries)
-#        print(node_loc_answer)
-#        update_SQL_DB_loc(node_loc_answer, node_matrix_id)
-#    time.sleep(1)
-#    print("Next Round")
+while True:
+    node_loc_queries, node_matrix_id, row_num = update_CSVs_from_DB(row_num)
+    print(node_loc_queries)
+    if len(node_loc_queries) > 0:
+        node_loc_answer = loc_single_predict(node_loc_queries)
+        print(node_loc_answer)
+        update_SQL_DB_loc(node_loc_answer, node_matrix_id)
+    time.sleep(1)
+    print("Next Round")
