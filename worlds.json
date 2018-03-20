@@ -46,6 +46,11 @@
                 "lng": 12.176,
                 "lat": 6.738,
                 "isServo": false
+            },
+			"240AC4F01E023CB8": {
+                "lng": 12.176,
+                "lat": 3.67,
+                "isServo": false
             }
         }
     },
