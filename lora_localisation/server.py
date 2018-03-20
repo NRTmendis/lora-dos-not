@@ -13,11 +13,11 @@ def log(msg):
     print(strftime("[%H:%M:%S]: ") + str(msg))
 
 
+# MQTT
 BROKER = "iot.eclipse.org"
 PORT = 1883
 KEEP_ALIVE = 60
 TOPIC = "UCL4thYearLORA/gatewayUpdateDATA"
-
 mqttc = mqtt.Client()
 mqttc.loop_start()
 mqttc.on_connect = mqtt_broadcast.on_connect
@@ -28,12 +28,11 @@ mqttc.connect(BROKER, int(PORT), int(KEEP_ALIVE))
 app = Flask(__name__)
 socketio = SocketIO(app)
 
-# conn = sqlite3.connect('../LoRaDN_Server/lora_GTW.db')
-# c = conn.cursor()
-
 # State
 curr_id = 0
-TIMEOUT = 0.5  # seconds
+DATABASE_LOCATION = '../LoRaDN_Server/lora_GTW.db'
+TIMEOUT = 1  # seconds
+BACKTRACK_RATE = 100
 nodes = {}
 
 
@@ -41,25 +40,50 @@ def is_node(pkt_data):
     return True if 'NiD' in pkt_data else False
 
 
+def get_max_id(db_cursor):
+    return db_cursor.execute(
+        "SELECT MAX(ID) FROM Lora_Gateway_PKT_Data"
+    ).fetchone()[0]
+
+
+def get_all_pkt_data(db_cursor):
+    return db_cursor.execute("""
+        SELECT
+            pkt_data,
+            pkt_longitude,
+            pkt_latitude
+        FROM Lora_Gateway_PKT_Data
+    """)
+
+
+def get_sliced_pkt_data(db_cursor, id_from, id_to):
+    return db_cursor.execute("""
+        SELECT
+            pkt_data,
+            pkt_longitude,
+            pkt_latitude
+        FROM Lora_Gateway_PKT_Data
+        WHERE ID BETWEEN ? AND ?
+    """, (id_from, id_to))
+
+
 def query_database():
-    conn = sqlite3.connect('../LoRaDN_Server/lora_GTW.db')
-    c = conn.cursor()
+    db_connection = sqlite3.connect(DATABASE_LOCATION)
+    db_cursor = db_connection.cursor()
     while True:
         sleep(TIMEOUT)
         global curr_id, nodes
-        max_id = c.execute(
-            "SELECT MAX(ID) FROM Lora_Gateway_PKT_Data").fetchone()[0]
+        max_id = get_max_id(db_cursor)
         if curr_id < max_id:
-            new_data = c.execute(
-                """
-                SELECT
-                    pkt_data,
-                    pkt_longitude,
-                    pkt_latitude
-                FROM Lora_Gateway_PKT_Data
-                WHERE ID BETWEEN ? AND ?
-                """,
-                (curr_id + 1, max_id))
+            new_data = None
+            if max_id < BACKTRACK_RATE:
+                new_data = get_all_pkt_data(db_cursor)
+            else:
+                new_data = get_sliced_pkt_data(
+                    db_cursor,
+                    curr_id - BACKTRACK_RATE,
+                    max_id
+                )
             for entry in new_data:
                 try:
                     pkt_data = json.loads(entry[0])
@@ -72,9 +96,9 @@ def query_database():
                 except Exception as e:
                     log("Error parsing packet data: {}".format(e))
                     continue
+            socketio.emit('nodeUpdate', nodes)
             curr_id = max_id
             log("Last ID pulled: {}.".format(curr_id))
-            # socketio.emit('nodeUpdate', nodes)
 
 
 thread = Thread(target=query_database)

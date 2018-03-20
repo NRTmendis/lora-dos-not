@@ -11,10 +11,12 @@ import {
 } from 'recharts';
 
 // Victory (Formidable)
-// import {
-//   VictoryChart,
-//   VictoryScatter,
-// } from 'victory';
+import {
+  VictoryChart,
+  VictoryScatter,
+  VictoryTooltip,
+  VictoryAxis
+} from 'victory';
 
 import openSocket from 'socket.io-client';
 import './App.css';
@@ -51,7 +53,7 @@ class App extends Component {
       world: "floor7labs",
       broadcastRate: 60,
       angle: 0,
-      drawerOpen: true,
+      drawerOpen: false,
       antennaDialogOpen: false
     };
   }
@@ -166,18 +168,26 @@ class App extends Component {
           </div>
         </Drawer>
       </Hidden>
-      {/* <VictoryChart size={2}>
-        <VictoryScatter
-          data={Object.values(this.state.gateways)}
-          x="lng"
-          y="lat"
-        />
+      {/* <VictoryChart
+        style={{ margin: 0, padding: 0 }}
+        domainPadding={20}
+      >
         <VictoryScatter
           data={Object.values(this.state.nodes)}
+          labels={d => `x: ${d.x}, y: ${d.y}`}
+          labelComponent={<VictoryTooltip />}
           size={2}
           style={{ data: { fill: `red` } }}
           x="lng"
           y="lat"
+        />
+        <VictoryScatter
+          data={Object.values(this.state.gateways)}
+          labels={d => `x: ${d.x}, y: ${d.y}`}
+          labelComponent={<VictoryTooltip />}
+          x="lng"
+          y="lat"
+          size={2}
         />
       </VictoryChart> */}
       <ScatterChart width={1150} height={700}>
