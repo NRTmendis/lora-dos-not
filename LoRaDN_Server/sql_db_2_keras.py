@@ -118,8 +118,8 @@ def new_cell_for_ML(db_ids):
 					Gw_RSSI[y] = pkt_rssi  # +60 For non-antenna connections
 			if gw_check_id != "Not Found":
 				if Gw_Loc_db[y][0] == gw_check_id:
-					# The packet was from a gateway so max dB set
-					Gw_RSSI[y] = -20
+					# The packet was from a gateway so max dB set heuristically
+					Gw_RSSI[y] = -28
 
 	# Mean value and scaling formatting
 	#np_Gw_RSSI = numpy.asarray(Gw_RSSI)
@@ -185,20 +185,30 @@ def update_CSVs_from_DB(row_num):
 						DATA_to_NODE_CSV.append(
 							new_cell_for_ML(pkt_matrix_ids))
 						node_matrix_ids.append(pkt_matrix_ids)
-	for x in range(0, len(node_matrix_ids) - 1):
+	cc_nd = len(node_matrix_ids) - 1
+	cc_nd_tab = []
+	while (cc_nd >= 1):
 		try:
-			if set(node_matrix_ids[x]).issuperset(set(node_matrix_ids[x + 1])):
-				del node_matrix_ids[x + 1]
-				del DATA_to_NODE_CSV[x + 1]
+			if set(node_matrix_ids[cc_nd-1]).issuperset(set(node_matrix_ids[cc_nd])):
+				cc_nd_tab.append(cc_nd)
 		except:
 			pass
-	for x in range(0, len(gw_matrix_ids) - 1):
+		cc_nd = cc_nd-1
+	for x in cc_nd_tab:
+		del node_matrix_ids[x]
+		del DATA_to_NODE_CSV[x]
+	cc_gw = len(gw_matrix_ids) - 1
+	cc_gw_tab = []
+	while (cc_gw >= 1):
 		try:
-			if set(gw_matrix_ids[x]).issuperset(set(gw_matrix_ids[x + 1])):
-				del gw_matrix_ids[x + 1]
-				del DATA_to_GTW_CSV[x + 1]
+			if set(gw_matrix_ids[cc_gw-1]).issuperset(set(gw_matrix_ids[cc_gw])):
+				cc_gw_tab.append(cc_gw)
 		except:
 			pass
+		cc_gw = cc_gw-1
+	for x in cc_gw_tab:
+		del gw_matrix_ids[x]
+		del DATA_to_GTW_CSV[x]
 	conn = sqlite3.connect(Lora_GTW_DB)
 	curs = conn.cursor()
 	conn.close()
@@ -228,13 +238,13 @@ def update_SQL_DB_loc(node_loc_ARR, node_ID_ARR):
 
 row_num = 1
 node_loc_queries, node_matrix_id, row_num = update_CSVs_from_DB(row_num)
-#train_localisation_model()
-while True:
-    node_loc_queries, node_matrix_id, row_num = update_CSVs_from_DB(row_num)
-    print(node_loc_queries)
-    if len(node_loc_queries) > 0:
-        node_loc_answer = loc_single_predict(node_loc_queries)
-        print(node_loc_answer)
-        update_SQL_DB_loc(node_loc_answer, node_matrix_id)
-    time.sleep(1)
-    print("Next Round")
+train_localisation_model()
+#while True:
+#    node_loc_queries, node_matrix_id, row_num = update_CSVs_from_DB(row_num)
+#    print(node_loc_queries)
+#    if len(node_loc_queries) > 0:
+#        node_loc_answer = loc_single_predict(node_loc_queries)
+#        print(node_loc_answer)
+#        update_SQL_DB_loc(node_loc_answer, node_matrix_id)
+#    time.sleep(1)
+#    print("Next Round")
