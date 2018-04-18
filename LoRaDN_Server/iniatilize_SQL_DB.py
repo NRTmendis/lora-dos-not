@@ -1,4 +1,4 @@
-# Author Nissanka Mendis
+""" Created by Nissanka Mendis on 18/03/2018"""
 # UCL 4th Year LoraWAN project SQL db
 
 import sqlite3

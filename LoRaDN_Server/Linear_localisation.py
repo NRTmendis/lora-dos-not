@@ -1,19 +1,10 @@
+""" Created by Nissanka Mendis on 18/03/2018"""
 #Only works with Python 2.7. As localization library only runs on that.
 
 import sys
 import numpy as np
 import localization as lx
 from pandas import read_csv
-#sys.path.insert(1, '..')
-#from utils import get_current_world, get_current_model, get_gateways
-
-# SETTINGS CONSTANTS
-#CURRENT_WORLD = get_current_world()
-#CURRENT_MODEL = get_current_model()
-
-# Gateway Locations (Change according to preset location)
-#		[Gateway ID,	Lattitude, Longitude]
-#Gw_Loc_db = get_gateways(CURRENT_WORLD, lists=True)
 
 Gw_Loc_db = [
 		["240AC4F01E023C54",6.738,12.291], #id, lat, long

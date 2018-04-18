@@ -1,4 +1,6 @@
 """ LoPy LoRaWAN Nano Gateway configuration options """
+""" Based on original LoRa nanogateway.py by Pycom-LoPy: Daniel Campora https://github.com/pycom/pycom-libraries/blob/master/examples/lorawan-nano-gateway/nanogateway.py"""
+""" Modified by Nissanka Mendis on 18/03/2018"""
 
 import machine
 import ubinascii

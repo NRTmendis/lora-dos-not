@@ -1,4 +1,4 @@
-# Author Nissanka Mendis
+""" Created by Nissanka Mendis on 18/03/2018"""
 # MQTT subscriber and database transferer
 
 import paho.mqtt.client as mqtt

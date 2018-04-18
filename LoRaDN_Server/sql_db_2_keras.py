@@ -1,6 +1,5 @@
-# Author Nissanka Mendis
-# SQL DB data to Machine Learning CSV format parser
-# Nissanka Mendis 2018 Feb.
+""" Created by Nissanka Mendis on 18/03/2018"""
+# SQL DB data to Machine Learning CSV format parser and ML Trainer
 
 import os
 import sqlite3

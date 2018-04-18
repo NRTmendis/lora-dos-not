@@ -1,3 +1,6 @@
+""" Created by Nissanka Mendis on 18/03/2018"""
+# MQTT broadcaster test
+
 import paho.mqtt.client as mqtt
 from datetime import datetime
 import json

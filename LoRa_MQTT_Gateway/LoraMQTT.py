@@ -1,7 +1,7 @@
 """ Based on original LoRa nanogateway.py by Pycom-LoPy: Daniel Campora https://github.com/pycom/pycom-libraries/blob/master/examples/lorawan-nano-gateway/nanogateway.py"""
 """ LoPy LoRa Nano Gateway to private MQTT Server for both publishing packets and subscribing to service updates. Can be used for both EU868 and US915. """
 
-""" Modified by Nissanka Mendis on 18/11/2017"""
+""" Modified by Nissanka Mendis on 18/03/2018"""
 
 import errno
 import machine

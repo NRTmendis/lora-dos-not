@@ -1,6 +1,4 @@
-# Author Nissanka Mendis. LSTM Multivariate localisation algorithm and training 2018 Feb.
-# Based on code by Jason Brownlee
-# At https://machinelearningmastery.com/multivariate-time-series-forecasting-lstms-keras/
+""" Created by Nissanka Mendis on 18/03/2018"""
 
 from math import sqrt
 from numpy import concatenate

@@ -1,4 +1,4 @@
-# Author Nissanka Mendis
+""" Created by Nissanka Mendis on 18/03/2018"""
 # SQL database data handler
 
 import json
