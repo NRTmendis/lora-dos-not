@@ -7,6 +7,9 @@ import csv
 import json
 from ML_localisation import train_localisation_model
 from ML_localisation import loc_single_predict
+from psuedo_generate_locs import filtAvgLocs
+from psuedo_generate_locs import genNewLocs
+from psuedo_generate_locs import psuedoGenPoints
 import sched
 import time
 import numpy
@@ -212,7 +215,15 @@ def update_CSVs_from_DB(row_num):
 	curs = conn.cursor()
 	conn.close()
 	# Create CSV for Gateway data to train model
-	create_CSV(Lora_GTW_PP, DATA_to_GTW_CSV, True)
+	#create_CSV(Lora_GTW_PP, DATA_to_GTW_CSV, True)
+	
+	#Create Proper training set data
+	out_A = filtAvgLocs(DATA_to_GTW_CSV)
+	out_B = genNewLocs(100, out_A)			#minimum 100 new locations generated
+	out_C = pseudoGenPoints(1000000,out_B,5) #minimum 1M points to train system on. With Random RSSI offset of +/- 5 
+	create_CSV(Lora_GTW_PP, out_C, True)
+	
+	
 	# Create CSV for Node data to query model
 	create_CSV(Lora_NODE_PP, DATA_to_NODE_CSV, False)
 	return (DATA_to_NODE_CSV, node_matrix_ids, (max_id - 1))
