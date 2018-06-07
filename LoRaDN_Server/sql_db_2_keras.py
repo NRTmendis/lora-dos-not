@@ -217,10 +217,13 @@ def update_CSVs_from_DB(row_num):
 	# Create CSV for Gateway data to train model
 	#create_CSV(Lora_GTW_PP, DATA_to_GTW_CSV, True)
 	
+	
 	#Create Proper training set data
 	out_A = filtAvgLocs(DATA_to_GTW_CSV)
-	out_B = genNewLocs(100, out_A)			#minimum 100 new locations generated
-	out_C = pseudoGenPoints(1000000,out_B,5) #minimum 1M points to train system on. With Random RSSI offset of +/- 5 
+	out_B = genNewLocs(out_A)
+	while (len(out_B) < 50):			#Until min 50 new locations
+		out_B = genNewLocs(out_B)		
+	out_C = psuedoGenPoints(1000000,out_B,3) #minimum 1M points to train system on. With Random RSSI offset of +/- 3 
 	create_CSV(Lora_GTW_PP, out_C, True)
 	
 	
@@ -248,7 +251,7 @@ def update_SQL_DB_loc(node_loc_ARR, node_ID_ARR):
 
 row_num = 1
 node_loc_queries, node_matrix_id, row_num = update_CSVs_from_DB(row_num)
-train_localisation_model()
+#train_localisation_model()
 #while True:
 #    node_loc_queries, node_matrix_id, row_num = update_CSVs_from_DB(row_num)
 #    print(node_loc_queries)
