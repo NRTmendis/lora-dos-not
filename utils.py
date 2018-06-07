@@ -1,5 +1,6 @@
 # Module containing all methods required by other Python files
 # Author: Ayush Singh
+"""Created by Ayush Singh 18/03/2018"""
 
 import json
 
