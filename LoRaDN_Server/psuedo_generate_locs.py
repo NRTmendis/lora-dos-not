@@ -2,14 +2,7 @@
 # Pseudo generate locations for ML
 # Nissanka Mendis 2018 June.
 
-import sys
 import random
-sys.path.insert(1, '..')
-from utils import get_current_world, get_current_model, get_gateways
-
-# SETTINGS CONSTANTS
-CURRENT_WORLD = get_current_world()
-CURRENT_MODEL = get_current_model()
 
 def filtAvgLocs(RSSI_tab):
 	
@@ -47,7 +40,7 @@ def filtAvgLocs(RSSI_tab):
 	
 	return (loc_tab)
 	
-def genNewLocs(loc_tab):
+def genNewLocs(loc_tab, offset):
 	
 	new_locs_tab = []
 	for row_A in range(0, len(loc_tab)):
@@ -55,13 +48,42 @@ def genNewLocs(loc_tab):
 			new_row = []
 			for col in range(0,len(loc_tab[row_B])):
 				new_row_val=(float(loc_tab[row_A][col]) + float(loc_tab[row_B][col]))/2
-				new_row.append(new_row_val)
+				new_row.append(round(new_row_val,2)) #Keep to 1cm accuracy
 			for col in range(1, len(new_row)-2):
 				new_row[col] = round(new_row[col]) #Keep RSSI as integers
 			new_locs_tab.append(new_row)
-	
+			
+	#Filter out positions that are overlapping together
+	fil_loc_tab = []
+	del_list = []
+	for row_A in range(0,len(new_locs_tab)):
+		val_found = False
+		if len(fil_loc_tab) >= 1 :
+			for row_B in range(0, len(fil_loc_tab)):
+				#offset = 0.2 #Points within 20cm of each other get filtered out.
+				if \
+				(new_locs_tab[row_A][len(new_locs_tab[row_A])-2] >= fil_loc_tab[row_B][len(fil_loc_tab[row_B])-2] - offset) \
+				and \
+				(new_locs_tab[row_A][len(new_locs_tab[row_A])-2] <= fil_loc_tab[row_B][len(fil_loc_tab[row_B])-2] + offset):
+					if \
+					(new_locs_tab[row_A][len(new_locs_tab[row_A])-1] >= fil_loc_tab[row_B][len(fil_loc_tab[row_B])-1] - offset ) \
+					and \
+					(new_locs_tab[row_A][len(new_locs_tab[row_A])-1] <= fil_loc_tab[row_B][len(fil_loc_tab[row_B])-1] + offset):
+						if row_A not in del_list:
+							del_list.append(row_A)
+						val_found = True
+						
+		if val_found == False:
+			fil_loc_tab.append(new_locs_tab[row_A])
+			
+	if len(del_list) >= 1 :
+		rev_del_list = del_list[::-1]
+		for row in rev_del_list:
+			del new_locs_tab[row]
+		
 	for row in range(len(loc_tab)-1, -1 , -1):
 		new_locs_tab.insert(0, loc_tab[row])
+		
 	for row in range(0,len(new_locs_tab)):
 		new_locs_tab[row][0] = row + 1
 		
@@ -89,5 +111,3 @@ def psuedoGenPoints(req_points, loc_tab, offset_rssi):
 		total_locs_tab[row][0] = row + 1
 		
 	return (total_locs_tab)
-		
-	

@@ -220,10 +220,11 @@ def update_CSVs_from_DB(row_num):
 	
 	#Create Proper training set data
 	out_A = filtAvgLocs(DATA_to_GTW_CSV)
-	out_B = genNewLocs(out_A)
-	while (len(out_B) < 50):			#Until min 50 new locations
-		out_B = genNewLocs(out_B)		
-	out_C = psuedoGenPoints(1000000,out_B,3) #minimum 1M points to train system on. With Random RSSI offset of +/- 3 
+	out_B = genNewLocs(out_A, 0.2)
+	while (len(out_B) < 50):			#Until min 50 new locations and 20cm distance apart
+		out_B = genNewLocs(out_B, 0.2)		
+	out_C = psuedoGenPoints(1000000,out_B,3) 
+	#minimum 1M points to train system on. With Random RSSI offset of +/- 3 
 	create_CSV(Lora_GTW_PP, out_C, True)
 	
 	
