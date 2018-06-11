@@ -1,7 +1,7 @@
 """ Based on original LoRa nanogateway.py by Pycom-LoPy: Daniel Campora https://github.com/pycom/pycom-libraries/blob/master/examples/lorawan-nano-gateway/nanogateway.py"""
 """ LoPy LoRa Nano Gateway to private MQTT Server for both publishing packets and subscribing to service updates. Can be used for both EU868 and US915. """
 
-""" Modified by Nissanka Mendis on 11/06/2018"""
+""" Modified by Nissanka Mendis on 18/03/2018"""
 
 import errno
 import machine
@@ -65,7 +65,7 @@ class NanoGateway:
     Configuration requried in config.py for wifi access and MQTT server connections and LoRa frequency.
     """
 
-    def __init__(self, id, frequency, datarate, ssid, password, server, port, tpc_snd, tpc_mtce, ntp_server='pool.ntp.org', ntp_period=3600, bcast_pkt_gtw_period=6000):
+    def __init__(self, id, frequency, datarate, ssid, user, password, server, port, tpc_snd, tpc_mtce, ntp_server='pool.ntp.org', ntp_period=3600, bcast_pkt_gtw_period=60, cur_angle=0):
         self.id = id
         self.server = server
         self.port = port
@@ -76,12 +76,14 @@ class NanoGateway:
         self.datarate = datarate
 
         self.ssid = ssid
+        self.user = user
         self.password = password
 
         self.ntp_server = ntp_server
         self.ntp_period = ntp_period
 
         self.server_ip = None
+
 
         self.sf = self._dr_to_sf(self.datarate)
         self.bw = self._dr_to_bw(self.datarate)
@@ -92,6 +94,8 @@ class NanoGateway:
         self.sock = None
 
         self.bcast_pkt_gtw_period = bcast_pkt_gtw_period
+
+        self.cur_angle = cur_angle
 
         #maintnenace MQTT subscription flag
         self.MQTTsub_stop = False
@@ -176,7 +180,7 @@ class NanoGateway:
         self.wlan.deinit()
 
     def _connect_to_wifi(self):
-        self.wlan.connect(self.ssid, auth=(WLAN.WPA2,  self.password ))
+        self.wlan.connect(self.ssid, auth=(WLAN.WPA2_ENT, self.user, self.password ), identity=self.user)
         conn_cc = 0
         while not self.wlan.isconnected():
             utime.sleep_ms(50)
@@ -267,6 +271,31 @@ class NanoGateway:
         RX_PK["size"] = len(rx_data)
         return ujson.dumps(RX_PK)
 
+    def set_angle(self, new_angle = 0, current_angle = 0):
+        pwm = PWM(0, frequency=50)  # use PWM timer 0, with a frequency of 5KHz
+        # create pwm channel on pin P12 with a duty cycle of 50%
+        pwm_c = pwm.channel(0, pin='P12', duty_cycle=0.5)
+        
+        degrees = new_angle - current_angle
+        if (abs(degrees) >= 360):
+            degrees = new_angle + current_angle
+        print(degrees)
+        if (degrees >= 0):
+            print("Forward")
+            pwm_c.duty_cycle(0.074) #Clockwise Rotation
+            degrees = abs(degrees)
+            time_angle = int((float(degrees)/360)*3860)
+            utime.sleep_ms(time_angle)
+            pwm_c.duty_cycle(0.0) 
+        else:
+            print("Reverse")
+            pwm_c.duty_cycle(0.078) #Anti-Clockwise Rotation
+            degrees = abs(degrees)
+            time_angle = int((float(degrees)/360)*2540)
+            utime.sleep_ms(time_angle)
+            pwm_c.duty_cycle(0.0) 
+        return(new_angle)
+
     def _push_data(self, data):
         packet = data
         try:
@@ -310,6 +339,8 @@ class NanoGateway:
             in_data = ubinascii.a2b_base64(msg_instruction)
             pp_data = ujson.loads(in_data)
             in_Brate = pp_data['Broadcast_Rate']
+            in_Angle = pp_data['M_Angle']
+            self.cur_angle = self.set_angle(int(in_Angle), self.cur_angle) 
             self.bcast_pkt_gtw_period = int(in_Brate)
             self.stat_alarm.cancel()
             sleep_time = int(machine.rng()/ (2**12))
