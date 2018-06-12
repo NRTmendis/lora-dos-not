@@ -21,8 +21,7 @@ from utils import get_current_world, get_current_model, get_gateways, set_curren
 CURRENT_WORLD = get_current_world()
 CURRENT_MODEL = get_current_model()
 
-
-def train_localisation_model(epCH=500, CSV_file='lora_GTW_PP.csv'):
+def train_localisation_model(epCH=25, CSV_file='lora_GTW_PP.csv'):
 	current_time = strftime("%d%m%y_%H%M%S")
 	# load dataset
 	dataset = read_csv(CSV_file, header=0, index_col=0)
@@ -33,18 +32,17 @@ def train_localisation_model(epCH=500, CSV_file='lora_GTW_PP.csv'):
 	scaler = StandardScaler()
 	scaler.fit(values)
 	scaled = scaler.fit_transform(values)
-	joblib.dump(scaler, "{}_{}{}".format(CURRENT_WORLD,
-										 current_time, ".save"))
+	
 	# split into train and test sets
 	train = scaled
 	# split into input and outputs
-	train_X, train_y = train[:, :-2], train[:, -2:]
-	# reshape input to be 3D [samples, steps, features]
-	train_X = train_X.reshape((train_X.shape[0], 1, train_X.shape[1]))
+	train_X, train_y = train[:, :-2], train[:, -2:]		
 	
 	# design network
 	model = Sequential()
-	model.add(LSTM(500, input_shape=(train_X.shape[1], train_X.shape[2])))
+	model.add(Dense(64, input_shape=(train_X.shape[1],)))
+	model.add(Dense(128))
+	model.add(Dense(64))
 	model.add(Dense(2))
 	model.compile(loss='mean_squared_error', optimizer='adam', metrics=['accuracy'])
 	
@@ -52,9 +50,11 @@ def train_localisation_model(epCH=500, CSV_file='lora_GTW_PP.csv'):
 	# fit network
 	model.fit(train_X, train_y, epochs=epCH, batch_size=72, verbose=1, shuffle=True)
 	# save model
-	model_name = "{}_{}{}".format(CURRENT_WORLD, current_time, ".h5")
-	model.save(model_name)
-	set_current_model(set_current_model)
+	model_name_pre = "{}_{}".format(CURRENT_WORLD, current_time)
+	model_name_set = "{}{}".format(model_name_pre,".h5")
+	model.save(model_name_set)									#Save Model
+	joblib.dump(scaler, "{}{}".format(model_name_pre, ".save")) #Save scaler
+	set_current_model(model_name_pre)							#Set new model name
 
 
 def loc_single_predict(test_Val, QUERY_CSV_BATCH='none.csv'):
@@ -69,21 +69,22 @@ def loc_single_predict(test_Val, QUERY_CSV_BATCH='none.csv'):
 			del row[0]  # Remove ID from array.
 		test_Val = array(test_Val)
 		test_Vals = test_Val.astype('float32')
-	# normalize features
+	
 	CURRENT_MODEL = get_current_model()
+	print("The Current model is " + str(CURRENT_MODEL))
 	scaler = joblib.load('{}.save'.format(CURRENT_MODEL))
 	scaled = scaler.transform(test_Vals)
 	# split back to test value
 	check = scaled[-int(test_Vals.shape[0]):, :]
 	# split into input and outputs
 	test_X, test_y = check[:, :-2], check[:, -2:]
-	# reshape input to be 3D [samples, steps, features]
-	test_X = test_X.reshape((test_X.shape[0], 1, test_X.shape[1]))
 	# load exisiting model
 	model = load_model('{}.h5'.format(CURRENT_MODEL))
+	
 	# make a prediction
 	yhat = model.predict(test_X)
-	test_X = test_X.reshape((test_X.shape[0], test_X.shape[2]))
+	#test_X = test_X.reshape((test_X.shape[0], test_X.shape[2]))
+	
 	# invert scaling for forecast
 	inv_yhat = concatenate((test_X, yhat), axis=1)
 	inv_yhat = concatenate((scaled, inv_yhat), axis=0)
