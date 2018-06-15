@@ -12,6 +12,7 @@ if __name__ == '__main__':
         datarate=config.LORA_GW_DR,
         ssid=config.WIFI_SSID,
         password=config.WIFI_PASS,
+        user=config.WIFI_USER,
         server=config.SERVER,
         port=config.PORT,
 		tpc_snd=config.SND_TPC,

@@ -17,6 +17,7 @@ from network import WLAN
 from machine import Timer
 from machine import PWM
 from simple import  MQTTClient
+from create_cert import create_new_cert
 
 PROTOCOL_VERSION = const(2)
 
@@ -65,7 +66,7 @@ class NanoGateway:
     Configuration requried in config.py for wifi access and MQTT server connections and LoRa frequency.
     """
 
-    def __init__(self, id, frequency, datarate, ssid, password, server, port, tpc_snd, tpc_mtce, ntp_server='pool.ntp.org', ntp_period=3600, bcast_pkt_gtw_period=6000):
+    def __init__(self, id, frequency, datarate, ssid, password, user, server, port, tpc_snd, tpc_mtce, ntp_server='pool.ntp.org', ntp_period=3600, bcast_pkt_gtw_period=6000):
         self.id = id
         self.server = server
         self.port = port
@@ -77,6 +78,7 @@ class NanoGateway:
 
         self.ssid = ssid
         self.password = password
+        self.user = user
 
         self.ntp_server = ntp_server
         self.ntp_period = ntp_period
@@ -176,7 +178,7 @@ class NanoGateway:
         self.wlan.deinit()
 
     def _connect_to_wifi(self):
-        self.wlan.connect(self.ssid, auth=(WLAN.WPA2,  self.password ))
+        self.wlan.connect(self.ssid, auth=(WLAN.WPA2_ENT, self.user, self.password), identity= self.user)
         conn_cc = 0
         while not self.wlan.isconnected():
             utime.sleep_ms(50)
