@@ -46,10 +46,40 @@
                 "lng": 12.176,
                 "lat": 6.738,
                 "isServo": false
+            }
+        }
+    },
+	 "floor7MPEB": {
+        "name": "7th Floor MPEB Research Lab",
+        "gateways": {
+            "240AC4F01E0286DC": {
+                "lng": 0.000,
+                "lat": 0.000,
+                "isServo": false
             },
-			"240AC4F01E023CB8": {
-                "lng": 12.176,
-                "lat": 3.67,
+            "240AC4F01E023E3C": {
+                "lng": 0.000,
+                "lat": 0.000,
+                "isServo": false
+            },
+            "240AC4F01E025FF4": {
+                "lng": 0.000,
+                "lat": 0.000,
+                "isServo": false
+            },
+            "240AC4F01E023B44": {
+                "lng": 0.000,
+                "lat": 0.000,
+                "isServo": false
+            },
+			"240AC4F01E026ACC": {
+                "lng": 0.000,
+                "lat": 0.000,
+                "isServo": false
+            },
+			"240AC4F01E023C54": {
+                "lng": 0.000,
+                "lat": 0.000,
                 "isServo": false
             }
         }
