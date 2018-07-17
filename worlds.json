@@ -52,7 +52,7 @@
 	 "floor7MPEB": {
         "name": "7th Floor MPEB Research Lab",
         "gateways": {
-            "240AC4F01E007712-0": {
+            "240AC4F01E007712": {
                 "lng": 11.49,
                 "lat": 19.88,
                 "isServo": false
