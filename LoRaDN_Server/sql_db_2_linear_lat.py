@@ -1,18 +1,14 @@
-""" Created by Nissanka Mendis on 18/03/2018"""
-# SQL DB data to Machine Learning CSV format parser and ML Trainer
+""" Created by Nissanka Mendis on 23/07/2018"""
+#Linear Regression alternative system
 
 import os
 import sqlite3
 import csv
 import json
-from ML_localisation import train_localisation_model
-from ML_localisation import loc_single_predict
-from psuedo_generate_locs import filtAvgLocs
-from psuedo_generate_locs import genNewLocs
-from psuedo_generate_locs import psuedoGenPoints
-import sched
 import time
-import numpy
+import numpy as np
+import math
+import scipy.optimize as optimize
 import sys
 sys.path.insert(1, '..')
 from utils import get_current_world, get_gateways
@@ -32,15 +28,6 @@ Lora_NODE_PP = "Lora_NODE_PP.csv"
 # Room 710
 Gw_Loc_db = get_gateways(CURRENT_WORLD, lists=True)
 
-# Room 422
-# Gw_Loc_db = [
-#		["240AC4F01E023C54",0,0.422],
-#		["240AC4F01E0286DC",7.756,8.248],
-#		["240AC4F01E025FF4",7.866,0.567],
-#		["240AC4F01E023E3C",0,8.152]
-#	    ]
-
-
 def Gateway_Check(jsonData):
     try:
         json_Dict = json.loads(jsonData)
@@ -51,33 +38,6 @@ def Gateway_Check(jsonData):
         return ("Not Found")  # Not a gateway id
     except:
         return ("Not Found")  # Not a gateway packet
-
-
-def create_CSV(csvfile, DATA_to_CSV, AppendWrite=True):
-    try:
-        max_GW = len(DATA_to_CSV[0]) - 3  # 3 rows are not gateway rssi
-    except:
-        return
-    CSV_header = ["iD"]
-    for x in range(0, max_GW):
-        CSV_header.append("GW_RSSI_" + str(x + 1))
-    #CSV_header.append("GW_Mean")
-    CSV_header.append("GW_Long")
-    CSV_header.append("GW_Lat")
-    append_write = 'w'
-    if AppendWrite:
-        if os.path.exists(csvfile):
-            append_write = 'a'  # append if already exists
-            AppendWrite = True
-        else:
-            AppendWrite = False
-    # Write to CSV
-    with open(csvfile, append_write, newline='') as out_csv_file:
-        csv_out = csv.writer(out_csv_file)
-        if not AppendWrite:
-            csv_out.writerow(CSV_header)
-        csv_out.writerows(DATA_to_CSV)
-
 
 def new_cell_for_ML(db_ids):
 	# Re-connect to server
@@ -123,12 +83,6 @@ def new_cell_for_ML(db_ids):
 					# The packet was from a gateway so max dB set heuristically
 					Gw_RSSI[y] = -28
 
-	# Mean value and scaling formatting
-	#np_Gw_RSSI = numpy.asarray(Gw_RSSI)
-	#mean_Gw_RSSI = list(filter(lambda a: a != -150, Gw_RSSI))
-	#mean_RSSI = numpy.mean(numpy.asarray(mean_Gw_RSSI))
-	#np_Gw_RSSI = np_Gw_RSSI - mean_RSSI
-	#Gw_RSSI = np_Gw_RSSI.tolist()
 
 	new_cell_row = Gw_RSSI
 	new_cell_row.insert(0, (db_ids[0]))  # Add iD to front
@@ -137,7 +91,6 @@ def new_cell_for_ML(db_ids):
 	new_cell_row.append(pkt_lat)
 	conn.close()
 	return (new_cell_row)
-
 
 def update_CSVs_from_DB(row_num):
 	conn = sqlite3.connect(Lora_GTW_DB)
@@ -214,29 +167,109 @@ def update_CSVs_from_DB(row_num):
 	conn = sqlite3.connect(Lora_GTW_DB)
 	curs = conn.cursor()
 	conn.close()
-	# Create CSV for Gateway data to train model
-	#create_CSV(Lora_GTW_PP, DATA_to_GTW_CSV, True)
-	
-	
-	
-	
-	
-	# Create CSV for Node data to query model
-	#create_CSV(Lora_NODE_PP, DATA_to_NODE_CSV, False)
 	
 	return (DATA_to_GTW_CSV, DATA_to_NODE_CSV, node_matrix_ids, (max_id - 1))
 
-# Update the SQL database with the estimated locations
+def calc_lin_rel(testVal):
+#Calculate y = mx + c for all gateways where y is RSSI and x is log(distance)
+	for row in testVal:
+		del row[0]  
+	gateway_lin = []
+	for x2 in range (0, len(testVal[0]) -2):
+		x_val_arr = []
+		y_val_arr = []
+		for x in range(0, len(testVal)):
+			y_val = testVal[x][x2]
+			x_val = math.sqrt( math.fabs(float(testVal[x][-2]) - float(Gw_Loc_db[x2][2])) + math.fabs(float(testVal[x][-1]) - float(Gw_Loc_db[x2][1])))
+			if x_val == 0:
+				x_val_arr.append(0)
+			else:
+				x_val_arr.append(math.log10(x_val)) #Log scale for linear relationship between RSSI and distance
+			y_val_arr.append(y_val)
+		fit_lin = np.polyfit(x_val_arr,y_val_arr,1)
+		gateway_lin.append(fit_lin)
+	return(gateway_lin) #Output [m,c]
 
-def genPoints(DATA_to_GTW_CSV):
-	#Create Proper training set data
-	out_A = filtAvgLocs(DATA_to_GTW_CSV)
-	out_B = genNewLocs(out_A, 0.2)
-	while (len(out_B) < 20):			#Until min 20 new locations and 20cm distance apart
-		out_B = genNewLocs(out_B, 0.2)		
-	out_C = psuedoGenPoints(10000,out_B,3) 
-	#minimum 10k points to train system on. With Random RSSI offset of +/- 3 
-	create_CSV(Lora_GTW_PP, out_C, True)
+def calc_radial_dist(gateway_lin, query_rssi):
+	out_dist = []
+	for d_val in range(0, len(query_rssi)):
+		l_one_dist = []
+		for val in range(0, len(gateway_lin)):
+			dist = math.pow(10,((query_rssi[d_val][val] - gateway_lin[val][1])/gateway_lin[val][0]))
+			l_one_dist.append(dist)
+		out_dist.append(l_one_dist)
+	return (out_dist)
+
+def calc_single_err_dist(old_position, new_position):
+	out_dist = math.sqrt( math.fabs(float(old_position[0]) - float(new_position[0])) + math.fabs(float(old_position[1]) - float(new_position[1])))
+	return out_dist
+	
+def extract_gw_pos(Gw_Loc_db):
+	pure_pos = Gw_Loc_db
+	for row in pure_pos:
+		del row[0] 
+		
+	return pure_pos
+	
+def init_loc(pure_pos, test_dist_one):
+	#Returns closest Gateway for initial guess
+	min_index = np.argmin(test_dist_one)
+	return(pure_pos[min_index])
+
+def mse(x, locations, distances):
+	mse = 0.0
+	count = 0
+	for location, distance in zip(locations, distances):
+		distance_calculated = calc_single_err_dist(x, location)
+		mse += math.pow(distance_calculated - distance, 2.0)
+		count = count + 1
+	return (mse / count)
+	
+def filt_not_rec(pure_pos, test_dist_one):
+	#Remove gateways that did not receive the packet from calculation
+	to_del = []
+	for val in range(0, len(test_dist_one)):
+		if test_dist_one[val] >= 20:
+			to_del.append(val)
+	
+	to_del = reversed(to_del)
+	for valx in to_del:
+		del pure_pos[valx]
+		del test_dist_one[valx]
+	
+	return (pure_pos, test_dist_one)
+	
+def predict_loc(node_loc_points, test_query_arr):
+	#Linear optimization solution to multilateration
+	
+	for row in test_query_arr:
+		del row[0]  # Remove ID from array.
+		del row[-1] #get rid of default x
+		del row[-1] #get rid of default y
+
+	rel_points = calc_lin_rel(node_loc_points)
+	test_dist = calc_radial_dist(rel_points,test_query_arr)
+	pure_gw_pos = extract_gw_pos(Gw_Loc_db)
+	
+	location_answers = []
+	for x in range(0, len(test_dist)):
+		filt_gw_pos, filt_test_dist = filt_not_rec(pure_gw_pos, test_dist[x])
+		init_guess = init_loc(filt_gw_pos, filt_test_dist)
+
+		result = optimize.minimize(
+		mse,                         # The error function
+		init_guess,            # The initial guess
+		args=(filt_gw_pos, filt_test_dist), # Additional parameters for mse
+		method='L-BFGS-B',           # The optimisation algorithm
+		options={
+			'ftol':1e-9,         # Tolerance
+			'maxiter': 1e+9      # Maximum iterations
+		})
+		
+		location = result.x
+		location_answers.append(location)
+	
+	return (location_answers)
 
 def update_SQL_DB_loc(node_loc_ARR, node_ID_ARR):
     conn = sqlite3.connect(Lora_GTW_DB)
@@ -249,20 +282,19 @@ def update_SQL_DB_loc(node_loc_ARR, node_ID_ARR):
                 '''UPDATE Lora_Gateway_PKT_Data SET pkt_latitude = ? WHERE id = ?''', (node_loc_ARR[x][1], id_Z))
     conn.commit()
     conn.close()
-
+	
 #***************Main Code Here*********************************************************************************************
 
 
 row_num = 1
 node_loc_points, node_loc_queries, node_matrix_id, row_num = update_CSVs_from_DB(row_num)
-genPoints(node_loc_points)
 
-train_localisation_model()
 while True:
     if len(node_loc_queries) > 0:
         print(node_loc_queries)
-        node_loc_answer = loc_single_predict(node_loc_queries)
+        node_loc_answer = predict_loc(node_loc_queries)
         print(node_loc_answer)
         update_SQL_DB_loc(node_loc_answer, node_matrix_id)
     time.sleep(1)
     node_loc_points, node_loc_queries, node_matrix_id, row_num = update_CSVs_from_DB(row_num)
+
