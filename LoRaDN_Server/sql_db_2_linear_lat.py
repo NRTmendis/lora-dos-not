@@ -8,6 +8,7 @@ import json
 import time
 import numpy as np
 import math
+from copy import deepcopy
 import scipy.optimize as optimize
 import sys
 sys.path.insert(1, '..')
@@ -77,7 +78,7 @@ def new_cell_for_ML(db_ids):
 			if Gw_Loc_db[y][0] == pkt_gtiD:
 				Gw_RSSI[y] = pkt_rssi
 				if gw_check_id == "Not Found":
-					Gw_RSSI[y] = pkt_rssi  # +58 For non-antenna connections
+					Gw_RSSI[y] = pkt_rssi +58 # +58 For non-antenna connections
 			if gw_check_id != "Not Found":
 				if Gw_Loc_db[y][0] == gw_check_id:
 					# The packet was from a gateway so max dB set heuristically
@@ -170,17 +171,19 @@ def update_CSVs_from_DB(row_num):
 	
 	return (DATA_to_GTW_CSV, DATA_to_NODE_CSV, node_matrix_ids, (max_id - 1))
 
-def calc_lin_rel(testVal):
+def calc_lin_rel(testValX):
 #Calculate y = mx + c for all gateways where y is RSSI and x is log(distance)
+	testVal = testValX
+	Gw_Loc_temp = Gw_Loc_db
 	for row in testVal:
 		del row[0]  
 	gateway_lin = []
-	for x2 in range (0, len(testVal[0]) -2):
+	for x2 in range (0, len(Gw_Loc_temp)):
 		x_val_arr = []
 		y_val_arr = []
 		for x in range(0, len(testVal)):
 			y_val = testVal[x][x2]
-			x_val = math.sqrt( math.fabs(float(testVal[x][-2]) - float(Gw_Loc_db[x2][2])) + math.fabs(float(testVal[x][-1]) - float(Gw_Loc_db[x2][1])))
+			x_val = math.sqrt( math.fabs(float(testVal[x][-2]) - float(Gw_Loc_temp[x2][2])) + math.fabs(float(testVal[x][-1]) - float(Gw_Loc_temp[x2][1])))
 			if x_val == 0:
 				x_val_arr.append(0)
 			else:
@@ -231,15 +234,26 @@ def filt_not_rec(pure_pos, test_dist_one):
 	for val in range(0, len(test_dist_one)):
 		if test_dist_one[val] >= 20:
 			to_del.append(val)
+		if test_dist_one[val] <= 0.1:
+			to_del.append(val)
 	
-	to_del = reversed(to_del)
+
+	to_del = list(reversed(to_del))
 	for valx in to_del:
 		del pure_pos[valx]
 		del test_dist_one[valx]
 	
 	return (pure_pos, test_dist_one)
+
+def setup_loc(loc_points):
+	loc_pointsX = []
+	loc_pointsX = deepcopy(loc_points)
+	rel_points = calc_lin_rel(loc_pointsX)
+	Gw_loc_db_temp = get_gateways(CURRENT_WORLD, lists=True)
+	pure_gw_pos = extract_gw_pos(Gw_loc_db_temp)
+	return(rel_points, pure_gw_pos)
 	
-def predict_loc(node_loc_points, test_query_arr):
+def predict_loc(pure_gw_pos, rel_points, test_query_arr):
 	#Linear optimization solution to multilateration
 	
 	for row in test_query_arr:
@@ -247,9 +261,8 @@ def predict_loc(node_loc_points, test_query_arr):
 		del row[-1] #get rid of default x
 		del row[-1] #get rid of default y
 
-	rel_points = calc_lin_rel(node_loc_points)
 	test_dist = calc_radial_dist(rel_points,test_query_arr)
-	pure_gw_pos = extract_gw_pos(Gw_Loc_db)
+	
 	
 	location_answers = []
 	for x in range(0, len(test_dist)):
@@ -288,13 +301,20 @@ def update_SQL_DB_loc(node_loc_ARR, node_ID_ARR):
 
 row_num = 1
 node_loc_points, node_loc_queries, node_matrix_id, row_num = update_CSVs_from_DB(row_num)
-
 while True:
-    if len(node_loc_queries) > 0:
-        print(node_loc_queries)
-        node_loc_answer = predict_loc(node_loc_queries)
-        print(node_loc_answer)
-        update_SQL_DB_loc(node_loc_answer, node_matrix_id)
-    time.sleep(1)
-    node_loc_points, node_loc_queries, node_matrix_id, row_num = update_CSVs_from_DB(row_num)
+	if len(node_loc_queries) > 0:
+		print(node_loc_queries)
+		node_loc_points_temp = deepcopy(node_loc_points)
+		if len(node_loc_points_temp) >= 25 :
+			start_loc, start_gw = setup_loc(node_loc_points_temp) #Setup linear system
+		start_gw_loc = deepcopy(start_gw)
+		node_loc_answer = predict_loc(start_gw_loc, start_loc,node_loc_queries)
+		print(node_loc_answer)
+	#update_SQL_DB_loc(node_loc_answer, node_matrix_id)
+	time.sleep(1)
+	node_loc_points, node_loc_queries, node_matrix_id, row_num = update_CSVs_from_DB(row_num)
+	a = input('Enter first number: ')
+	b = input('Enter second number: ')
+	c = input('Enter third number: ')
+	node_loc_queries = [[143, int(a), int(b), int(c), -46, -41, 0, 0]]
 
