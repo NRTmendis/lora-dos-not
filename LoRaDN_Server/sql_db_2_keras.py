@@ -117,7 +117,7 @@ def new_cell_for_ML(db_ids):
 			if Gw_Loc_db[y][0] == pkt_gtiD:
 				Gw_RSSI[y] = pkt_rssi
 				if gw_check_id == "Not Found":
-					Gw_RSSI[y] = pkt_rssi  # +58 For non-antenna connections
+					Gw_RSSI[y] = pkt_rssi +58 # +58 For non-antenna connections
 			if gw_check_id != "Not Found":
 				if Gw_Loc_db[y][0] == gw_check_id:
 					# The packet was from a gateway so max dB set heuristically
@@ -231,10 +231,11 @@ def update_CSVs_from_DB(row_num):
 def genPoints(DATA_to_GTW_CSV):
 	#Create Proper training set data
 	out_A = filtAvgLocs(DATA_to_GTW_CSV)
-	out_B = genNewLocs(out_A, 0.2)
-	while (len(out_B) < 20):			#Until min 20 new locations and 20cm distance apart
-		out_B = genNewLocs(out_B, 0.2)		
-	out_C = psuedoGenPoints(10000,out_B,3) 
+	#out_B = genNewLocs(out_A, 0.2)
+	#while (len(out_B) < 200):			#Until min 20 new locations and 20cm distance apart
+	#	out_B = genNewLocs(out_B, 0.2)		
+	#out_B = DATA_to_GTW_CSV
+	out_C = psuedoGenPoints(10000,out_A,3) #variation of 3, csv of 10000
 	#minimum 10k points to train system on. With Random RSSI offset of +/- 3 
 	create_CSV(Lora_GTW_PP, out_C, True)
 
@@ -255,14 +256,20 @@ def update_SQL_DB_loc(node_loc_ARR, node_ID_ARR):
 
 row_num = 1
 node_loc_points, node_loc_queries, node_matrix_id, row_num = update_CSVs_from_DB(row_num)
-genPoints(node_loc_points)
+
+
+node_loc_points_temp = [[1, -47,-37,-49,-43,-52,-63,  2.38 ,   1.48], [2, -48,-35,-46,-46,-40,-57,  6.28 ,   1.48], [4, -55,-54,-46,-51,-37,-61, 14.98 ,   1.48], [5, -52,-43,-41,-47,-39,-53, 11.08 ,   1.48], [6, -44,-51,-46,-42,-36,-52,  9.78  ,  1.48], [7, -43,-47,-42,-38,-53,-47,  2.38  ,  6.68], [8, -43,-44,-48,-45,-45,-49, 14.98  ,  6.68], [9, -36,-43,-37,-38,-51,-45,  9.78  ,  6.68], [10, -38,-46,-42,-39,-52,-45, 11.29   , 9.84], [11, -48,-49,-42,-40,-46,-52,  3.75 ,   9.84], [14, -40,-43,-43,-31,-53,-47,  1.15 ,   9.84], [15, -35,-52,-42,-35,-49,-44,  7.65  ,  9.84], [16, -39,-52,-43,-46,-52,-38,  3.59,   19.88], [17, -29,-48,-47,-47,-59,-46, 11.49 ,  19.88], [18, -38,-49,-46,-41,-53,-47,  7.65  , 12.44], [19, -31,-62,-41,-49,-51,-34,  7.65,   15.04], [20, -44,-56,-49,-44,-54,-39,  7.65 ,  17.64], [21, -40,-49,-42,-54,-55,-38,  3.59  , 14.68], [23, -38,-53,-46,-46,-62,-38, 11.49 ,  14.68]]
+
+genPoints(node_loc_points_temp)
 
 train_localisation_model()
 while True:
-    if len(node_loc_queries) > 0:
-        print(node_loc_queries)
-        node_loc_answer = loc_single_predict(node_loc_queries)
-        print(node_loc_answer)
-        update_SQL_DB_loc(node_loc_answer, node_matrix_id)
-    time.sleep(1)
-    node_loc_points, node_loc_queries, node_matrix_id, row_num = update_CSVs_from_DB(row_num)
+	if len(node_loc_queries) > 0:
+		for rob in node_loc_queries:
+			print(rob)
+		node_loc_answer = loc_single_predict(node_loc_queries)
+		for rob in node_loc_answer:
+			print(rob)
+		#update_SQL_DB_loc(node_loc_answer, node_matrix_id)
+	time.sleep(1)
+	node_loc_points, node_loc_queries, node_matrix_id, row_num = update_CSVs_from_DB(row_num)

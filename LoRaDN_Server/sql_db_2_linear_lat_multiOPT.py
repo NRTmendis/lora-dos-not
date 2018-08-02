@@ -10,6 +10,7 @@ import numpy as np
 import math
 from copy import deepcopy
 import scipy.optimize as optimize
+from scipy import stats
 import sys
 sys.path.insert(1, '..')
 from utils import get_current_world, get_gateways
@@ -78,7 +79,7 @@ def new_cell_for_ML(db_ids):
 			if Gw_Loc_db[y][0] == pkt_gtiD:
 				Gw_RSSI[y] = pkt_rssi
 				if gw_check_id == "Not Found":
-					Gw_RSSI[y] = pkt_rssi +56 # +58 For non-antenna connections
+					Gw_RSSI[y] = pkt_rssi +58 # +58 For non-antenna connections
 			if gw_check_id != "Not Found":
 				if Gw_Loc_db[y][0] == gw_check_id:
 					# The packet was from a gateway so max dB set heuristically
@@ -171,6 +172,24 @@ def update_CSVs_from_DB(row_num):
 	
 	return (DATA_to_GTW_CSV, DATA_to_NODE_CSV, node_matrix_ids, (max_id - 1))
 
+def linregress(x, y):
+    """ Return R^2 where x and y are array-like."""
+
+    slope, intercept, r_value, p_value, std_err = stats.linregress(x, y)
+    return slope, intercept,r_value**2	
+
+	
+def Max_rs2(y_int_RSSI, x_array, y_array):
+	x_arrayZ = deepcopy(x_array)
+	y_arrayZ = deepcopy(y_array)
+	
+	for count  in range(0, int(len(x_array)/len(Gw_Loc_db))):
+		x_arrayZ.append(0)
+		y_arrayZ.append(y_int_RSSI)
+	gradient, y_intercept, rs2 = linregress(x_arrayZ,y_arrayZ)
+	Max_rs2_err = 1 - rs2
+	return (Max_rs2_err)
+	
 def calc_lin_rel(testValX):
 #Calculate y = mx + c for all gateways where y is RSSI and x is log(distance)
 	testVal = testValX
@@ -185,18 +204,49 @@ def calc_lin_rel(testValX):
 			y_val = testVal[x][x2]
 			x_val = math.sqrt( math.fabs(float(testVal[x][-2]) - float(Gw_Loc_temp[x2][2])) + math.fabs(float(testVal[x][-1]) - float(Gw_Loc_temp[x2][1])))
 			if x_val == 0:
-				x_val_arr.append(0)
+				pass
 			else:
-				x_val_arr.append(math.log10(x_val)) #Log scale for linear relationship between RSSI and distance
-			y_val_arr.append(y_val)
-		fit_lin = np.polyfit(x_val_arr,y_val_arr,1)
+				if y_val == -150:
+					pass
+				else:
+					x_val_arr.append(math.log10(x_val)) #Log scale for linear relationship between RSSI and distance
+					y_val_arr.append(y_val)
+		
+		init_RSSI = -28
+		
+		best_fit_lin = optimize.minimize(
+		Max_rs2,                         # The error function
+		init_RSSI,            # The initial guess
+		args=(x_val_arr, y_val_arr), # Additional parameters for mse
+		method='L-BFGS-B',           # The optimisation algorithm
+		bounds=((-40,-25),),
+		options={
+			'ftol':1e-9,         # Tolerance
+			'maxiter': 1e+9      # Maximum iterations
+		})
+
+		
+		y_int_best = float(best_fit_lin.x)
+		
+		
+		for count  in range(0, int(len(x_val_arr)/len(Gw_Loc_db))):
+			x_val_arr.append(0)
+			y_val_arr.append(y_int_best)
+		
+		gradient, y_intercept, rs2 = linregress(x_val_arr,y_val_arr)
+		fit_lin = [gradient, y_intercept]
+		print("LinG function with OPTIMIZE:"+str(x2)+": Slope: "+str(gradient)+" Intercept: "+ str(y_intercept)+" R_squared: "+ str(rs2))
+		
+		"""
 		print("X Val Array "+str(x2)+" : ")
 		for rob in x_val_arr:
 			print(rob)
 		print("Y Val Array "+str(x2)+" : ")
 		for rob in y_val_arr:
 			print(rob)
-		print("Fit Linear function "+str(x2)+" : "+ str(fit_lin))
+		"""
+		
+		
 		gateway_lin.append(fit_lin)
 	return(gateway_lin) #Output [m,c]
 
@@ -317,7 +367,7 @@ row_num = 1
 node_loc_points, node_loc_queries, node_matrix_id, row_num = update_CSVs_from_DB(row_num)
 node_loc_points_temp = deepcopy(node_loc_points)
 
-node_loc_points_temp = [[1, -47,-37,-49,-43,-52,-63,  2.38 ,   1.48], [2, -48,-35,-46,-46,-40,-57,  6.28 ,   1.48], [4, -55,-54,-46,-51,-37,-61, 14.98 ,   1.48], [5, -52,-43,-41,-47,-39,-53, 11.08 ,   1.48], [6, -44,-51,-46,-42,-36,-52,  9.78  ,  1.48], [7, -43,-47,-42,-38,-53,-47,  2.38  ,  6.68], [8, -43,-44,-48,-45,-45,-49, 14.98  ,  6.68], [9, -36,-43,-37,-38,-51,-45,  9.78  ,  6.68], [10, -38,-46,-42,-39,-52,-45, 11.29   , 9.84], [11, -48,-49,-42,-40,-46,-52,  3.75 ,   9.84], [14, -40,-43,-43,-31,-53,-47,  1.15 ,   9.84], [15, -35,-52,-42,-35,-49,-44,  7.65  ,  9.84], [16, -39,-52,-43,-46,-52,-38,  3.59,   19.88], [17, -29,-48,-47,-47,-59,-46, 11.49 ,  19.88], [18, -38,-49,-46,-41,-53,-47,  7.65  , 12.44], [19, -31,-62,-41,-49,-51,-34,  7.65,   15.04], [20, -44,-56,-49,-44,-54,-39,  7.65 ,  17.64], [21, -40,-49,-42,-54,-55,-38,  3.59  , 14.68], [23, -38,-53,-46,-46,-62,-38, 11.49 ,  14.68]]
+#node_loc_points_temp = [[1, -47,-37,-49,-43,-52,-63,  2.38 ,   1.48], [2, -48,-35,-46,-46,-40,-57,  6.28 ,   1.48], [4, -55,-54,-46,-51,-37,-61, 14.98 ,   1.48], [5, -52,-43,-41,-47,-39,-53, 11.08 ,   1.48], [6, -44,-51,-46,-42,-36,-52,  9.78  ,  1.48], [7, -43,-47,-42,-38,-53,-47,  2.38  ,  6.68], [8, -43,-44,-48,-45,-45,-49, 14.98  ,  6.68], [9, -36,-43,-37,-38,-51,-45,  9.78  ,  6.68], [10, -38,-46,-42,-39,-52,-45, 11.29   , 9.84], [11, -48,-49,-42,-40,-46,-52,  3.75 ,   9.84], [14, -40,-43,-43,-31,-53,-47,  1.15 ,   9.84], [15, -35,-52,-42,-35,-49,-44,  7.65  ,  9.84], [16, -39,-52,-43,-46,-52,-38,  3.59,   19.88], [17, -29,-48,-47,-47,-59,-46, 11.49 ,  19.88], [18, -38,-49,-46,-41,-53,-47,  7.65  , 12.44], [19, -31,-62,-41,-49,-51,-34,  7.65,   15.04], [20, -44,-56,-49,-44,-54,-39,  7.65 ,  17.64], [21, -40,-49,-42,-54,-55,-38,  3.59  , 14.68], [23, -38,-53,-46,-46,-62,-38, 11.49 ,  14.68]]
 
 start_loc, start_gw = setup_loc(node_loc_points_temp) #Setup linear system
 while True:
