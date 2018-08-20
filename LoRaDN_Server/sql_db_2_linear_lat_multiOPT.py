@@ -202,7 +202,7 @@ def calc_lin_rel(testValX):
 		y_val_arr = []
 		for x in range(0, len(testVal)):
 			y_val = testVal[x][x2]
-			x_val = math.sqrt( math.fabs(float(testVal[x][-2]) - float(Gw_Loc_temp[x2][2])) + math.fabs(float(testVal[x][-1]) - float(Gw_Loc_temp[x2][1])))
+			x_val = math.sqrt( math.pow(math.fabs(float(testVal[x][-2]) - float(Gw_Loc_temp[x2][2])),2) + math.pow(math.fabs(float(testVal[x][-1]) - float(Gw_Loc_temp[x2][1])),2))
 			if x_val == 0:
 				pass
 			else:
@@ -255,7 +255,7 @@ def calc_radial_dist(gateway_lin, query_rssi):
 	for d_val in range(0, len(query_rssi)):
 		l_one_dist = []
 		for val in range(0, len(gateway_lin)):
-			dist = math.pow(10,((query_rssi[d_val][val] - gateway_lin[val][1])/gateway_lin[val][0]))
+			dist = math.pow(10,((query_rssi[d_val][val] - gateway_lin[val][1])/(2*gateway_lin[val][0])))
 			l_one_dist.append(dist)
 		out_dist.append(l_one_dist)
 	return (out_dist)
@@ -324,9 +324,19 @@ def predict_loc(pure_gw_posX, rel_pointsX, test_query_arrX):
 		del row[0]  # Remove ID from array.
 		del row[-1] #get rid of default x
 		del row[-1] #get rid of default y
-
-	test_dist = calc_radial_dist(rel_points,test_query_arr)
 	
+	"""
+	print("Test Query Arr")
+	for row in test_query_arr:
+		print(row)
+	print("rel_points")
+	for row in rel_points:
+		print(row)
+	test_dist = calc_radial_dist(rel_points,test_query_arr)
+	print("Test Dist")
+	for row in test_dist:
+		print(row)
+	"""
 	
 	location_answers = []
 	for x in range(0, len(test_dist)):
