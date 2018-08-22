@@ -204,6 +204,14 @@ def calc_lin_rel(testValX):
 			y_val = testVal[x][x2]
 			x_val = math.sqrt( math.pow(math.fabs(float(testVal[x][-2]) - float(Gw_Loc_temp[x2][2])),2) + math.pow(math.fabs(float(testVal[x][-1]) - float(Gw_Loc_temp[x2][1])),2))
 			if x_val == 0:
+				"""
+				x_val_arr.append(0) #Log scale for linear relationship between RSSI and distance
+				y_val_arr.append(y_val)
+			else:
+				x_val_arr.append(math.log10(x_val)) #Log scale for linear relationship between RSSI and distance
+				y_val_arr.append(y_val)
+					
+			"""
 				pass
 			else:
 				if y_val == -150:
@@ -211,6 +219,7 @@ def calc_lin_rel(testValX):
 				else:
 					x_val_arr.append(math.log10(x_val)) #Log scale for linear relationship between RSSI and distance
 					y_val_arr.append(y_val)
+			
 		
 		init_RSSI = -28
 		
@@ -233,9 +242,11 @@ def calc_lin_rel(testValX):
 			x_val_arr.append(0)
 			y_val_arr.append(y_int_best)
 		
+		
 		gradient, y_intercept, rs2 = linregress(x_val_arr,y_val_arr)
 		fit_lin = [gradient, y_intercept]
-		print("LinG function with OPTIMIZE:"+str(x2)+": Slope: "+str(gradient)+" Intercept: "+ str(y_intercept)+" R_squared: "+ str(rs2))
+		
+		print("LinG function :"+str(x2)+": Slope: "+str(gradient)+" Intercept: "+ str(y_intercept)+" R_squared: "+ str(rs2))
 		
 		"""
 		print("X Val Array "+str(x2)+" : ")
@@ -255,13 +266,13 @@ def calc_radial_dist(gateway_lin, query_rssi):
 	for d_val in range(0, len(query_rssi)):
 		l_one_dist = []
 		for val in range(0, len(gateway_lin)):
-			dist = math.pow(10,((query_rssi[d_val][val] - gateway_lin[val][1])/(2*gateway_lin[val][0])))
+			dist = math.pow(10,((query_rssi[d_val][val] - gateway_lin[val][1])/(gateway_lin[val][0])))
 			l_one_dist.append(dist)
 		out_dist.append(l_one_dist)
 	return (out_dist)
 
 def calc_single_err_dist(old_position, new_position):
-	out_dist = math.sqrt( math.fabs(float(old_position[0]) - float(new_position[0])) + math.fabs(float(old_position[1]) - float(new_position[1])))
+	out_dist = math.sqrt( math.pow(math.fabs(float(old_position[0]) - float(new_position[0])),2) + math.pow(math.fabs(float(old_position[1]) - float(new_position[1])),2))
 	return out_dist
 	
 def extract_gw_pos(Gw_Loc_db):
@@ -325,6 +336,9 @@ def predict_loc(pure_gw_posX, rel_pointsX, test_query_arrX):
 		del row[-1] #get rid of default x
 		del row[-1] #get rid of default y
 	
+	
+	test_dist = calc_radial_dist(rel_points,test_query_arr)
+	
 	"""
 	print("Test Query Arr")
 	for row in test_query_arr:
@@ -332,11 +346,11 @@ def predict_loc(pure_gw_posX, rel_pointsX, test_query_arrX):
 	print("rel_points")
 	for row in rel_points:
 		print(row)
-	test_dist = calc_radial_dist(rel_points,test_query_arr)
 	print("Test Dist")
 	for row in test_dist:
 		print(row)
 	"""
+	
 	
 	location_answers = []
 	for x in range(0, len(test_dist)):
